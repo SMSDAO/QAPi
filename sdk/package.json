@@ -1,0 +1,15 @@
+{
+  "name": "@qapi/sdk",
+  "version": "1.0.0",
+  "description": "QAPi SDK – lightweight virtual module resolver client",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test src/tests/sdk.test.js"
+  },
+  "keywords": ["qapi", "virtual-modules", "sdk", "module-resolver"],
+  "author": "GXQ STUDIO",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
