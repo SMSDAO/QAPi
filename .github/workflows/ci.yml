@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master", "copilot/**"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  test-api:
+    name: API Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["18", "20", "22"]
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  test-sdk:
+    name: SDK Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+          cache-dependency-path: api/package-lock.json
+      - name: Install API dependencies (SDK tests start the API server)
+        run: cd api && npm ci
+      - name: Run SDK tests
+        run: cd sdk && npm test
+
+  validate-schema:
+    name: Validate module-node.schema.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check schema is valid JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('module-node.schema.json','utf8')); console.log('Schema OK');"

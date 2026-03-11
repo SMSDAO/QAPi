@@ -208,6 +208,29 @@ describe("GET /audit – tier guard", () => {
   });
 });
 
+// ── Metrics ───────────────────────────────────────────────────────────────
+describe("GET /metrics", () => {
+  test("returns operational snapshot without auth", async () => {
+    const { status, body } = await req("GET", "/metrics");
+    assert.equal(status, 200);
+    assert.ok(typeof body.resolvesLastMin === "number");
+    assert.ok(typeof body.moduleCount === "number");
+    assert.ok(typeof body.avgAuditScore === "number");
+    assert.ok(Array.isArray(body.modules));
+    assert.ok(Array.isArray(body.tiers));
+    assert.ok(body.service.status === "ok");
+  });
+});
+
+describe("GET /metrics/logs", () => {
+  test("returns log ring buffer without auth", async () => {
+    const { status, body } = await req("GET", "/metrics/logs");
+    assert.equal(status, 200);
+    assert.ok(typeof body.count === "number");
+    assert.ok(Array.isArray(body.logs));
+  });
+});
+
 // ── 404 fallback ──────────────────────────────────────────────────────────
 describe("404 fallback", () => {
   test("returns 404 for unknown routes", async () => {
