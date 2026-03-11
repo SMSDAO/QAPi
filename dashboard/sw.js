@@ -64,7 +64,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response && response.status === 200) {
+          // Cache successful responses AND opaque responses (status 0, cross-origin no-cors)
+          if (response && (response.ok || response.type === 'opaque')) {
             const clone = response.clone();
             caches.open(CACHE_VERSION).then((cache) => cache.put(request, clone));
           }
@@ -86,7 +87,20 @@ self.addEventListener('fetch', (event) => {
             }
             return response;
           })
-          .catch(() => cached); // fall back to stale cache if network fails
+          .catch(async () => {
+            // Network failed — return stale cache when available
+            if (cached) return cached;
+            // For navigation requests, fall back to the pre-cached app shell
+            if (request.mode === 'navigate') {
+              const shell = await caches.match('/index.html');
+              if (shell) return shell;
+            }
+            // Last resort: explicit offline response so respondWith() never rejects
+            return new Response('Service unavailable — you are offline', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain' },
+            });
+          });
         // Return cached copy immediately and update in the background
         return cached || networkFetch;
       })

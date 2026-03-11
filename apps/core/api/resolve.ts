@@ -51,7 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed', allowed: 'GET' });
   }
 
-  const { name, version } = req.query as Record<string, string>;
+  // Defensively extract scalar query params — Vercel types them as string | string[]
+  const rawName = req.query.name;
+  const rawVersion = req.query.version;
+  const name: string | undefined = Array.isArray(rawName) ? rawName[0] : rawName;
+  const version: string | undefined = Array.isArray(rawVersion) ? rawVersion[0] : rawVersion;
+
   if (!name) {
     return res.status(400).json({ error: 'Missing required query parameter: name' });
   }
