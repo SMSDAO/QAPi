@@ -231,11 +231,13 @@
     <p>MIT License • Built with Node.js + Tailwind CSS</p>
   </footer>
 
-  <!-- ── Live counter animation ─────────────────────────────────────────── -->
+  <!-- ── Live counter animation + /metrics polling ────────────────────── -->
   <script>
-    // Simulate live counter updates
+    const BASE_API_URL = "https://api.qapi.dev";
+
     function animateCounter(el, target, duration) {
       const start = parseInt(el.textContent) || 0;
+      if (start === target) return;
       const step = (target - start) / (duration / 50);
       let current = start;
       const timer = setInterval(() => {
@@ -249,18 +251,30 @@
       }, 50);
     }
 
-    // Kick off on load
-    window.addEventListener('DOMContentLoaded', () => {
-      animateCounter(document.getElementById('stat-resolves'), 1247, 1500);
-      animateCounter(document.getElementById('stat-modules'), 3, 500);
-      animateCounter(document.getElementById('stat-score'), 98, 1000);
+    async function fetchMetrics() {
+      try {
+        const res = await fetch(`${BASE_API_URL}/metrics`, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) return;
+        const data = await res.json();
 
-      // Simulate live resolves ticking up
-      setInterval(() => {
-        const el = document.getElementById('stat-resolves');
-        const v = parseInt(el.textContent);
-        el.textContent = v + Math.floor(Math.random() * 5);
-      }, 2000);
+        animateCounter(document.getElementById('stat-resolves'), data.resolvesLastMin ?? 0, 600);
+        animateCounter(document.getElementById('stat-modules'),  data.moduleCount      ?? 0, 400);
+        animateCounter(document.getElementById('stat-score'),    data.avgAuditScore    ?? 0, 600);
+
+        // Average latency across all modules
+        if (Array.isArray(data.modules) && data.modules.length > 0) {
+          const avgMs = data.modules.reduce((s, m) => s + (m.metrics?.avgLatencyMs ?? 0), 0) / data.modules.length;
+          document.getElementById('stat-latency').textContent = `${Math.round(avgMs)}ms`;
+        }
+      } catch {
+        // Network unavailable – retain previous values
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchMetrics();
+      // Poll every 10 seconds
+      setInterval(fetchMetrics, 10_000);
     });
   </script>
 </body>

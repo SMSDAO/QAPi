@@ -88,7 +88,9 @@ Developer Code
 
 ## Structured Logs
 
-Every resolution event emits a JSON log line on `stderr`:
+The API and loader hooks each emit JSON logs on different streams:
+
+**API Core Service → `stdout`** (one line per HTTP request):
 
 ```json
 {
@@ -106,10 +108,22 @@ Every resolution event emits a JSON log line on `stderr`:
 }
 ```
 
-These logs are:
-- Written to `stdout` by the API (one JSON line per request).
-- Written to `stderr` by the loader hooks.
-- Collected in a 200-event ring buffer accessible via `GET /metrics/logs`.
+**Loader hooks (`qapi-loader.mjs`, `qapi-register.cjs`) → `stderr`** (one line per intercepted import):
+
+```json
+{
+  "ts": "2026-03-11T05:00:00.000Z",
+  "level": "info",
+  "event": "resolution",
+  "module": "@qapi/some-module",
+  "source": "qapi-loader"
+}
+```
+
+The API logs are:
+- Written to `stdout` (full entry including `ip` and `keyId`).
+- Collected in a 200-event ring buffer with `ip` and `keyId` set to `null` (to protect client privacy on the public endpoint).
+- Accessible via `GET /metrics/logs` (ring buffer, redacted).
 - Visualised in the [QAPi Dashboard](https://qapi.dev).
 
 ---

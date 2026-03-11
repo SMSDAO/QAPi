@@ -11,15 +11,13 @@
 #
 #    What it does:
 #      1. Validates that Node.js >= 18 and npm are installed.
-#      2. Creates/updates an .npmrc that redirects require() resolution
-#         through the QAPi SDK register hook.
-#      3. Exports QAPI_KEY (session scope) and optionally persists it to
-#         ~/.bashrc / ~/.zshrc / ~/.profile.
-#      4. Installs the @qapi/sdk package (globally or locally).
-#      5. Writes a Node.js loader hook (qapi-loader.mjs) that intercepts
-#         module resolution and redirects QAPi-managed imports to the SDK.
-#      6. Verifies connectivity to the QAPi Core Service.
-#      7. Emits a structured JSON log for each bootstrap event.
+#      2. Installs the @qapi/sdk package (globally or locally).
+#      3. Writes Node.js loader hooks (qapi-loader.mjs, qapi-register.cjs)
+#         that intercept module resolution for QAPi-managed imports.
+#      4. Exports QAPI_KEY, QAPI_BASE_URL, and QAPI_TIER for the current
+#         session, and optionally persists them to ~/.bashrc / ~/.zshrc.
+#      5. Verifies connectivity to the QAPi Core Service.
+#      6. Emits a structured JSON log for each bootstrap event.
 #
 #  OPTIONS
 #    -k KEY      Your QAPi API key (e.g. qapi-starter-xxxx).
@@ -111,12 +109,13 @@ echo -e ""
 if $UNINSTALL; then
   log_step "Removing QAPi environment variables from shell profiles…"
   for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
-    [ -f "$profile" ] && sed -i '/# QAPi bootstrap/,/^$/d' "$profile" 2>/dev/null || true
+    [ -f "$profile" ] && perl -pi -e 'if (/# QAPi bootstrap/ .. /^$/) { $_ = "" }' "$profile" 2>/dev/null || true
   done
 
-  log_step "Removing Node.js loader hook ($LOADER_FILE)…"
+  log_step "Removing Node.js loader hooks ($LOADER_FILE, qapi-register.cjs)…"
   [ -f "$LOADER_FILE" ] && rm -f "$LOADER_FILE"
-  [ -f ".npmrc" ] && sed -i '/qapi/Id' ".npmrc" 2>/dev/null || true
+  [ -f "qapi-register.cjs" ] && rm -f "qapi-register.cjs"
+  [ -f ".npmrc" ] && perl -pi -e '$_ = "" if /qapi/i' ".npmrc" 2>/dev/null || true
 
   log_step "Uninstalling global @qapi/sdk (if present)…"
   command -v npm >/dev/null 2>&1 && npm uninstall -g @qapi/sdk 2>/dev/null || true
@@ -279,15 +278,14 @@ export async function load(url, context, nextLoad) {
     const specifier = decodeURIComponent(url.replace("qapi-virtual:", "").split("?")[0]);
     const ts = new Date().toISOString();
     process.stderr.write(
-      JSON.stringify({ ts, level: "info", event: "resolution", module: specifier, source: "qapi-virtual-load" }) + "\n"
+      JSON.stringify({ ts, level: "error", event: "resolution", module: specifier,
+        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @qapi/sdk instead." }) + "\n"
     );
-    // Return a thin shim that defers to the SDK at runtime
-    const source = `
-      import { QAPiClient } from "@qapi/sdk";
-      const _client = new QAPiClient({ apiKey: process.env.QAPI_KEY, baseUrl: process.env.QAPI_BASE_URL });
-      export default await _client.resolve(${JSON.stringify(specifier)});
-    `;
-    return { shortCircuit: true, format: "module", source };
+    throw new Error(
+      `QAPi virtual module streaming is not implemented for "${specifier}". ` +
+      `Use "new QAPiClient({ apiKey: process.env.QAPI_KEY }).resolve(${JSON.stringify(specifier)})" ` +
+      `from @qapi/sdk to obtain the module entrypoint, then load it via your own module loader.`
+    );
   }
   return nextLoad(url, context);
 }
@@ -331,17 +329,14 @@ Module._resolveFilename = function qapiResolveFilename(request, parent, isMain, 
   if (isQapiManaged(request)) {
     const ts = new Date().toISOString();
     process.stderr.write(
-      JSON.stringify({ ts, level: "info", event: "resolution", module: request, source: "qapi-register" }) + "\n"
+      JSON.stringify({ ts, level: "error", event: "resolution", module: request, source: "qapi-register",
+        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @qapi/sdk instead." }) + "\n"
     );
-    // Attempt to resolve via @qapi/sdk; if unavailable warn and fall through
-    try {
-      return _origResolve("@qapi/sdk", parent, isMain, options);
-    } catch {
-      process.stderr.write(
-        JSON.stringify({ ts, level: "warn", event: "resolution", module: request,
-          msg: "@qapi/sdk not found – falling back to local node_modules" }) + "\n"
-      );
-    }
+    throw new Error(
+      `QAPi virtual module streaming is not implemented for "${request}". ` +
+      `Use "new QAPiClient({ apiKey: process.env.QAPI_KEY }).resolve(${JSON.stringify(request)})" ` +
+      `from @qapi/sdk to obtain the module entrypoint, then load it via your own module loader.`
+    );
   }
   return _origResolve(request, parent, isMain, options);
 };
@@ -366,8 +361,8 @@ export QAPI_TIER=\"$TIER\"
 "
   for profile in "$HOME/.bashrc" "$HOME/.zshrc"; do
     if [ -f "$profile" ]; then
-      # Remove any previous QAPi block first
-      sed -i '/# QAPi bootstrap/,/^$/d' "$profile" 2>/dev/null || true
+      # Remove any previous QAPi block first (cross-platform: perl instead of sed -i)
+      perl -pi -e 'if (/# QAPi bootstrap/ .. /^$/) { $_ = "" }' "$profile" 2>/dev/null || true
       printf '%s' "$PROFILE_BLOCK" >> "$profile"
       log_ok "Written to $profile"
     fi

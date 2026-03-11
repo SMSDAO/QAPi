@@ -80,7 +80,8 @@ router.get("/", (_req, res) => {
  * Used by the dashboard for the live call-trace feed.
  */
 router.get("/logs", (_req, res) => {
-  res.json({ count: getLogs().length, logs: getLogs() });
+  const logs = getLogs();
+  res.json({ count: logs.length, logs });
 });
 
 module.exports = router;

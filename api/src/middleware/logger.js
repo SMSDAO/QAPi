@@ -4,7 +4,7 @@
 /**
  * Emits a structured JSON log line for every inbound request.
  *
- * Log shape:
+ * Log shape (stdout):
  * {
  *   ts:        ISO-8601 timestamp,
  *   level:     "info" | "warn" | "error",
@@ -18,6 +18,9 @@
  *   module:    module name being resolved (if applicable),
  *   ip:        client IP,
  * }
+ *
+ * Ring buffer shape (GET /metrics/logs – public):
+ * Same as above but with keyId and ip set to null to protect client privacy.
  *
  * For dashboard visibility every log is also pushed to an in-process
  * ring buffer (last 200 events) so that GET /metrics/logs can stream it.
@@ -59,7 +62,9 @@ function requestLogger(req, res, next) {
       module: req.query?.name || req.params?.id || null,
       ip: req.ip || req.socket?.remoteAddress || null,
     };
-    _push(entry);
+    // The ring buffer (fed to the public /metrics/logs endpoint) omits ip and
+    // keyId to avoid exposing client PII over an unauthenticated endpoint.
+    _push({ ...entry, keyId: null, ip: null });
     // eslint-disable-next-line no-console
     console.log(JSON.stringify(entry));
   });

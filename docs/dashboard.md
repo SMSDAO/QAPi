@@ -37,14 +37,16 @@ Each step shows:
 
 ## Live Stats
 
-The stats counters at the top of the dashboard are fed by polling `GET /metrics`:
+The stats counters at the top of the dashboard poll `GET /metrics` every 10 seconds and update in real-time:
 
-| Stat | Source |
+| Stat | Source field |
 |---|---|
-| Resolves / min | `resolvesLastMin` from `/metrics` |
-| Module Nodes | `moduleCount` from `/metrics` |
-| Avg Audit Score | `avgAuditScore` from `/metrics` |
-| Avg Latency | `modules[].metrics.avgLatencyMs` |
+| Resolves / min | `resolvesLastMin` |
+| Module Nodes | `moduleCount` |
+| Avg Audit Score | `avgAuditScore` |
+| Avg Latency | mean of `modules[].metrics.avgLatencyMs` |
+
+When the API is unreachable the dashboard falls back to the last fetched values.
 
 ---
 
@@ -85,12 +87,12 @@ The API should be deployed separately to a VPS (DigitalOcean / AWS / OVH) or a V
 
 ---
 
-## Configuring the Dashboard URL
+## Configuring the Dashboard API URL
 
-By default the dashboard points to `https://api.qapi.dev`. To use a self-hosted API, set the `QAPI_API_URL` meta tag in `dashboard/index.html`:
+By default the dashboard polls `https://api.qapi.dev/metrics`. To point the dashboard at a self-hosted API, change the `BASE_API_URL` constant in the inline `<script>` at the bottom of `dashboard/index.html`:
 
-```html
-<meta name="qapi-api-url" content="https://your-vps.example.com" />
+```js
+const BASE_API_URL = "https://your-vps.example.com";
 ```
 
-Or update the `BASE_API_URL` constant in the inline dashboard JavaScript.
+Then redeploy to Vercel.
