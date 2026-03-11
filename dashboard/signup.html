@@ -135,6 +135,9 @@
     <p>QAPi © 2026 GXQ STUDIO — MIT License</p>
   </footer>
 
+  <!-- Shared API client -->
+  <script src="api.js"></script>
+
   <script>
     // ── Tier selection ────────────────────────────────────────────────────────
     const tierColors = {
@@ -149,7 +152,6 @@
         document.getElementById('selected-tier').value = tier;
 
         document.querySelectorAll('.tier-btn').forEach((b) => {
-          const t = b.dataset.tier;
           b.style.background = '';
           b.setAttribute('aria-pressed', 'false');
           b.className = `tier-btn flex-1 py-3 rounded-lg border border-gray-700 text-gray-400 text-sm font-bold hover:border-neon-cyan hover:text-neon-cyan transition-all`;
@@ -189,15 +191,11 @@
       document.getElementById('error-box').classList.add('hidden');
 
       try {
-        // Call the QAPi signup endpoint
-        const res = await fetch('/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, tier }),
-        });
-        const data = await res.json();
+        // Use the shared QAPI client — auto-detects API URL for local dev + prod
+        const data = await QAPI.signup(email, tier);
 
-        if (!res.ok) throw new Error(data.error || 'Signup failed');
+        // Persist the key in localStorage so the dashboard can use it
+        QAPI.storeKey(data.apiKey);
 
         // Show success
         document.getElementById('signup-form').classList.add('hidden');
@@ -228,7 +226,7 @@ const module = await client.resolve('express');`;
       });
     }
 
-    // Register service worker (cache-first for static assets, network-only for API)
+    // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }

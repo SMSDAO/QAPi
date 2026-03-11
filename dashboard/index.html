@@ -225,16 +225,47 @@
     </div>
   </section>
 
+  <!-- ── Account Banner (shown when API key stored in localStorage) ──────── -->
+  <section id="account-banner" class="hidden relative z-10 max-w-7xl mx-auto px-6 pb-10">
+    <div class="rounded-xl border border-neon-cyan/30 bg-gray-900/80 px-6 py-4 flex flex-wrap items-center justify-between gap-4 box-glow-cyan">
+      <div class="flex items-center gap-3">
+        <span class="text-neon-green glow-green text-lg">✔</span>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-widest">Logged in as</p>
+          <p id="account-email" class="text-white text-sm font-bold"></p>
+        </div>
+        <span id="account-tier-badge" class="px-2 py-0.5 rounded text-xs font-bold border border-neon-cyan text-neon-cyan"></span>
+      </div>
+      <div class="flex gap-3 text-xs">
+        <code id="account-key" class="bg-gray-950 border border-gray-700 rounded px-3 py-1.5 text-neon-cyan max-w-xs truncate"></code>
+        <button onclick="copyAccountKey()" class="px-3 py-1.5 rounded border border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-gray-950 transition-all flex-shrink-0">Copy Key</button>
+        <button onclick="QAPI.clearKey(); location.reload();" class="px-3 py-1.5 rounded border border-gray-600 text-gray-400 hover:border-red-500 hover:text-red-400 transition-all flex-shrink-0">Sign Out</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Live Module Nodes ──────────────────────────────────────────────── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-6 pb-24">
+    <h2 class="text-center text-2xl font-bold text-neon-cyan glow-cyan mb-4 tracking-widest uppercase">Live Module Nodes</h2>
+    <p id="modules-status" class="text-center text-xs text-gray-500 mb-8">Loading…</p>
+    <div id="modules-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+    <p id="modules-auth-hint" class="hidden text-center text-xs text-gray-500 mt-6">
+      <a href="signup.html" class="text-neon-cyan hover:underline">Get an API key</a> to see live module metadata for your tier.
+    </p>
+  </section>
+
   <!-- ── Footer ────────────────────────────────────────────────────────── -->
   <footer class="relative z-10 border-t border-gray-800 py-10 text-center text-gray-600 text-xs">
     <p class="mb-2">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
     <p>MIT License • Built with Node.js + Tailwind CSS</p>
   </footer>
 
-  <!-- ── Live counter animation + /metrics polling ────────────────────── -->
-  <script>
-    const BASE_API_URL = "https://api.qapi.dev";
+  <!-- ── Shared API client ──────────────────────────────────────────────── -->
+  <script src="api.js"></script>
 
+  <!-- ── Live data + UI wiring ────────────────────────────────────────── -->
+  <script>
+    // ── Counter animation ─────────────────────────────────────────────────────
     function animateCounter(el, target, duration) {
       const start = parseInt(el.textContent) || 0;
       if (start === target) return;
@@ -251,33 +282,114 @@
       }, 50);
     }
 
-    async function fetchMetrics() {
+    // ── Metrics polling ───────────────────────────────────────────────────────
+    async function pollMetrics() {
       try {
-        const res = await fetch(`${BASE_API_URL}/metrics`, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) return;
-        const data = await res.json();
-
+        const data = await QAPI.fetchMetrics();
         animateCounter(document.getElementById('stat-resolves'), data.resolvesLastMin ?? 0, 600);
         animateCounter(document.getElementById('stat-modules'),  data.moduleCount      ?? 0, 400);
         animateCounter(document.getElementById('stat-score'),    data.avgAuditScore    ?? 0, 600);
-
-        // Average latency across all modules
         if (Array.isArray(data.modules) && data.modules.length > 0) {
           const avgMs = data.modules.reduce((s, m) => s + (m.metrics?.avgLatencyMs ?? 0), 0) / data.modules.length;
           document.getElementById('stat-latency').textContent = `${Math.round(avgMs)}ms`;
         }
-      } catch {
-        // Network unavailable – retain previous values
+      } catch { /* Network unavailable – retain previous values */ }
+    }
+
+    // ── Module grid rendering ─────────────────────────────────────────────────
+    const TIER_COLORS = {
+      starter: { border: 'border-neon-green/40',  badge: 'text-neon-green  border-neon-green'  },
+      pro:     { border: 'border-neon-cyan/40',   badge: 'text-neon-cyan   border-neon-cyan'   },
+      audited: { border: 'border-neon-purple/40', badge: 'text-neon-purple border-neon-purple' },
+    };
+
+    function statusDot(status) {
+      const colors = { active:'#00ff88', degraded:'#ffe600', offline:'#ff003c', quarantined:'#ff003c' };
+      const c = colors[status] || '#888';
+      return `<span style="color:${c};text-shadow:0 0 6px ${c}" title="${status}">●</span>`;
+    }
+
+    function renderModules(modules) {
+      const grid = document.getElementById('modules-grid');
+      grid.innerHTML = '';
+      for (const m of modules) {
+        const tc = TIER_COLORS[m.tier] || TIER_COLORS.starter;
+        const score = m.audit?.score ?? '—';
+        const scoreColor = score >= 90 ? '#00ff88' : score >= 70 ? '#ffe600' : '#ff003c';
+        grid.insertAdjacentHTML('beforeend', `
+          <div class="rounded-xl border ${tc.border} bg-gray-900/70 p-5 flex flex-col gap-3 hover:bg-gray-900 transition-colors">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <p class="font-bold text-white text-sm">${m.name}</p>
+                <p class="text-xs text-gray-500">v${m.version}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1">
+                ${statusDot(m.status)}
+                <span class="text-xs border rounded px-1.5 py-0.5 ${tc.badge}">${m.tier}</span>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400 flex-1">${m.description || ''}</p>
+            <div class="flex items-center justify-between text-xs text-gray-500">
+              <span>Audit <strong style="color:${scoreColor}">${score}/100</strong></span>
+              <span>${(m.metrics?.callsTotal ?? 0).toLocaleString()} calls</span>
+            </div>
+          </div>`);
       }
     }
 
+    async function loadModules() {
+      const statusEl = document.getElementById('modules-status');
+      const hintEl   = document.getElementById('modules-auth-hint');
+      const key = QAPI.getStoredKey();
+
+      try {
+        if (key) {
+          // Authenticated: fetch full module list for the user's tier
+          const data = await QAPI.fetchModules(key);
+          renderModules(data.modules || []);
+          statusEl.textContent = `${data.count} module${data.count !== 1 ? 's' : ''} accessible on ${data.tier} tier`;
+        } else {
+          // Public: show modules from the /metrics snapshot
+          const metrics = await QAPI.fetchMetrics();
+          renderModules(metrics.modules || []);
+          statusEl.textContent = `${metrics.moduleCount ?? 0} public module nodes`;
+          hintEl.classList.remove('hidden');
+        }
+      } catch {
+        statusEl.textContent = 'Could not load modules — API offline?';
+      }
+    }
+
+    // ── Account banner ────────────────────────────────────────────────────────
+    async function loadAccountBanner() {
+      const key = QAPI.getStoredKey();
+      if (!key) return;
+      const me = await QAPI.getMe(key);
+      if (!me) return;
+      document.getElementById('account-email').textContent = me.email;
+      document.getElementById('account-tier-badge').textContent = me.tier.toUpperCase();
+      document.getElementById('account-key').textContent = key;
+      document.getElementById('account-banner').classList.remove('hidden');
+    }
+
+    function copyAccountKey() {
+      const key = document.getElementById('account-key').textContent;
+      navigator.clipboard.writeText(key).then(() => {
+        const btn = event.target;
+        btn.textContent = '✔ Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Key'; }, 2000);
+      });
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
-      fetchMetrics();
-      // Poll every 10 seconds
-      setInterval(fetchMetrics, 10_000);
+      pollMetrics();
+      loadModules();
+      loadAccountBanner();
+      setInterval(pollMetrics, 10_000);
     });
 
-    // Register service worker (cache-first for static assets, network-only for API)
+    // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }

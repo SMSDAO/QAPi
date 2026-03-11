@@ -326,6 +326,168 @@ describe("GET /modules/stream", () => {
   });
 });
 
+// ── GET /v1/tiers ──────────────────────────────────────────────────────────
+describe("GET /v1/tiers", () => {
+  test("returns all three tiers with id, price, callsPerMin, features", async () => {
+    const { status, body } = await req("GET", "/v1/tiers");
+    assert.equal(status, 200);
+    assert.equal(body.tiers.length, 3);
+    const ids = body.tiers.map((t) => t.id);
+    assert.ok(ids.includes("starter"));
+    assert.ok(ids.includes("pro"));
+    assert.ok(ids.includes("audited"));
+    // Each tier must have the key fields
+    for (const t of body.tiers) {
+      assert.ok(t.id);
+      assert.ok(t.name);
+      assert.ok(t.price);
+      assert.ok(Array.isArray(t.features));
+    }
+  });
+
+  test("includes callerTier when API key is supplied", async () => {
+    const { status, body } = await req("GET", "/v1/tiers", {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.callerTier, "pro");
+  });
+});
+
+describe("GET /v1/tiers/:tierId", () => {
+  test("returns starter tier config", async () => {
+    const { status, body } = await req("GET", "/v1/tiers/starter");
+    assert.equal(status, 200);
+    assert.equal(body.id, "starter");
+    assert.equal(body.price, "Free");
+    assert.equal(body.callsPerMin, 100);
+    assert.ok(Array.isArray(body.features));
+  });
+
+  test("returns pro tier config with callsPerMin 1000", async () => {
+    const { status, body } = await req("GET", "/v1/tiers/pro");
+    assert.equal(status, 200);
+    assert.equal(body.id, "pro");
+    assert.equal(body.callsPerMin, 1000);
+  });
+
+  test("audited tier has null callsPerMin (unlimited)", async () => {
+    const { status, body } = await req("GET", "/v1/tiers/audited");
+    assert.equal(status, 200);
+    assert.equal(body.callsPerMin, null);
+  });
+
+  test("returns 404 for unknown tier", async () => {
+    const { status, body } = await req("GET", "/v1/tiers/enterprise");
+    assert.equal(status, 404);
+    assert.equal(body.code, "TIER_NOT_FOUND");
+  });
+});
+
+// ── GET /v1/modules ─────────────────────────────────────────────────────────
+describe("GET /v1/modules", () => {
+  test("returns 401 without API key", async () => {
+    const { status } = await req("GET", "/v1/modules");
+    assert.equal(status, 401);
+  });
+
+  test("returns module list for starter tier", async () => {
+    const { status, body } = await req("GET", "/v1/modules", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 200);
+    assert.ok(body.count >= 1);
+    assert.ok(Array.isArray(body.modules));
+    assert.equal(body.tier, "starter");
+  });
+
+  test("pro tier sees more modules than starter", async () => {
+    const starter = await req("GET", "/v1/modules", { headers: { "X-QAPi-Key": "qapi-starter-demo-key" } });
+    const pro      = await req("GET", "/v1/modules", { headers: { "X-QAPi-Key": "qapi-pro-demo-key" } });
+    assert.ok(pro.body.count >= starter.body.count);
+  });
+});
+
+// ── GET /v1/modules/:sha ────────────────────────────────────────────────────
+describe("GET /v1/modules/:sha", () => {
+  // SHA seeded in moduleStore.js for the 'express' module
+  const EXPRESS_SHA = "c0e7fa4de578f58adb6e8e4b2547a80dd42a2524";
+  const VPS_SHA     = "3f8d2e7a9c14b05feda6c8b97a12d5e3f4c81029";
+  const UNKNOWN_SHA = "f".repeat(40);
+
+  test("returns 401 without API key", async () => {
+    const { status } = await req("GET", `/v1/modules/${EXPRESS_SHA}`);
+    assert.equal(status, 401);
+  });
+
+  test("returns 400 for non-40-char SHA", async () => {
+    const { status, body } = await req("GET", "/v1/modules/abc123", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 400);
+    assert.equal(body.code, "V1_INVALID_SHA");
+  });
+
+  test("resolves express module from store by SHA", async () => {
+    const { status, body } = await req("GET", `/v1/modules/${EXPRESS_SHA}`, {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.resolved, true);
+    assert.equal(body.source, "store");
+    assert.equal(body.module.name, "express");
+    assert.equal(body.module.source.sha, EXPRESS_SHA);
+  });
+
+  test("starter cannot access pro-tier module by SHA", async () => {
+    const { status, body } = await req("GET", `/v1/modules/${VPS_SHA}`, {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 403);
+    assert.equal(body.code, "V1_TIER_INSUFFICIENT");
+  });
+
+  test("pro can access pro-tier module by SHA", async () => {
+    const { status, body } = await req("GET", `/v1/modules/${VPS_SHA}`, {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.resolved, true);
+    assert.equal(body.module.name, "@qapi/vps-module-alpha");
+  });
+
+  test("synthesizes metadata from GitHub when SHA is unknown + owner/repo/path given", async () => {
+    const { status, body } = await req(
+      "GET",
+      `/v1/modules/${UNKNOWN_SHA}?owner=expressjs&repo=express&path=index.js`,
+      { headers: { "X-QAPi-Key": "qapi-starter-demo-key" } }
+    );
+    assert.equal(status, 200);
+    assert.equal(body.resolved, true);
+    assert.equal(body.source, "github");
+    assert.ok(body.module.upstream.startsWith("https://raw.githubusercontent.com/"));
+    assert.ok(body.module.streamUrl.includes("/modules/stream"));
+  });
+
+  test("returns 404 for unknown SHA without query params", async () => {
+    const { status, body } = await req("GET", `/v1/modules/${UNKNOWN_SHA}`, {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 404);
+    assert.equal(body.code, "V1_MODULE_NOT_FOUND");
+  });
+
+  test("returns 400 for path traversal in path query param", async () => {
+    const { status, body } = await req(
+      "GET",
+      `/v1/modules/${UNKNOWN_SHA}?owner=expressjs&repo=express&path=../etc/passwd`,
+      { headers: { "X-QAPi-Key": "qapi-starter-demo-key" } }
+    );
+    assert.equal(status, 400);
+    assert.equal(body.code, "V1_INVALID_MODULE_REF");
+  });
+});
+
 // ── 404 fallback ──────────────────────────────────────────────────────────
 describe("404 fallback", () => {
   test("returns 404 for unknown routes", async () => {

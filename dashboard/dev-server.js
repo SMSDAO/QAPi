@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// QAPi Dashboard – minimal static file dev server
+// QAPi Dashboard – minimal static file dev server with API proxy
 // Usage: node dev-server.js [port]
 "use strict";
 
@@ -7,8 +7,10 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const PORT = process.env.PORT || Number(process.argv[2]) || 8080;
-const ROOT = __dirname;
+const PORT     = process.env.PORT || Number(process.argv[2]) || 8080;
+const API_HOST = process.env.QAPI_API_HOST || "localhost";
+const API_PORT = Number(process.env.QAPI_API_PORT) || 3000;
+const ROOT     = __dirname;
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -21,16 +23,61 @@ const MIME_TYPES = {
   ".txt":  "text/plain; charset=utf-8",
 };
 
+// Paths forwarded to the API server instead of served statically.
+const PROXY_PREFIXES = ["/auth", "/v1", "/modules", "/metrics", "/audit", "/health"];
+
+function shouldProxy(urlPath) {
+  return PROXY_PREFIXES.some(
+    (p) => urlPath === p || urlPath.startsWith(p + "/") || urlPath.startsWith(p + "?")
+  );
+}
+
+/**
+ * Forward request to the API server and pipe the response back.
+ * Streaming – does not buffer the body.
+ */
+function proxyToApi(clientReq, clientRes) {
+  const options = {
+    hostname: API_HOST,
+    port:     API_PORT,
+    path:     clientReq.url,
+    method:   clientReq.method,
+    headers:  { ...clientReq.headers, host: `${API_HOST}:${API_PORT}` },
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    clientRes.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(clientRes);
+  });
+
+  proxyReq.on("error", () => {
+    clientRes.writeHead(502, { "Content-Type": "application/json" });
+    clientRes.end(
+      JSON.stringify({ error: `API server unreachable at ${API_HOST}:${API_PORT}`, code: "PROXY_ERROR" })
+    );
+  });
+
+  clientReq.pipe(proxyReq);
+}
+
 const server = http.createServer((req, res) => {
-  // Normalise URL – strip query strings and fragments
-  const urlPath = req.url.split("?")[0].split("#")[0];
+  // Strip fragments; preserve query string for proxy
+  const urlPath   = req.url.split("#")[0];
+  const pathOnly  = urlPath.split("?")[0];
 
-  // Default to index.html for root
-  const relPath = urlPath === "/" ? "/index.html" : urlPath;
+  // ── API proxy ──────────────────────────────────────────────────────────────
+  if (shouldProxy(pathOnly)) {
+    proxyToApi(req, res);
+    return;
+  }
 
-  // Resolve to absolute path and prevent path traversal
+  // ── Static file serving ────────────────────────────────────────────────────
+  const relPath  = pathOnly === "/" ? "/index.html" : pathOnly;
+
+  // Resolve to absolute path and prevent path traversal via path.relative
   const filePath = path.resolve(ROOT, "." + relPath);
-  if (!filePath.startsWith(ROOT + path.sep) && filePath !== ROOT) {
+  const rel = path.relative(ROOT, filePath);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
     res.writeHead(403, { "Content-Type": "text/plain" });
     res.end("403 Forbidden");
     return;
@@ -57,5 +104,6 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[QAPi Dashboard] Serving at http://localhost:${PORT}`);
-  console.log(`[QAPi Dashboard] Serving files from: ${ROOT}`);
+  console.log(`[QAPi Dashboard] Static files from: ${ROOT}`);
+  console.log(`[QAPi Dashboard] API proxy → http://${API_HOST}:${API_PORT}  (${PROXY_PREFIXES.join(", ")})`);
 });
