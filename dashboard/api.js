@@ -31,7 +31,7 @@
     }
     // When the dashboard is deployed at the same origin as the API, use ""
     // (relative URLs). Otherwise fall back to the public production API.
-    return "https://api.qapi.dev";
+    return "";
   }
 
   const BASE = getBaseUrl();
