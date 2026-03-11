@@ -276,6 +276,11 @@
       // Poll every 10 seconds
       setInterval(fetchMetrics, 10_000);
     });
+
+    // Register service worker (cache-first for static assets, network-only for API)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   </script>
 </body>
 </html>

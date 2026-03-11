@@ -363,6 +363,11 @@ node -r @qapi/sdk/register ./your-app.js</code></pre>
     }, { rootMargin: '0px 0px -60% 0px' });
 
     document.querySelectorAll('section[id]').forEach((s) => observer.observe(s));
+
+    // Register service worker (cache-first for static assets, network-only for API)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   </script>
 </body>
 </html>
