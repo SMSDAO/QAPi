@@ -1,0 +1,8 @@
+{
+  "CORS": {
+    "allowedOrigins": ["https://qapi.github.io"],
+    "allowedMethods": ["GET", "OPTIONS"],
+    "allowedHeaders": ["Authorization", "X-QAPI-Mode", "Content-Type", "If-None-Match"],
+    "allowCredentials": true
+  }
+}
