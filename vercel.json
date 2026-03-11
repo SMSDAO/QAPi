@@ -1,16 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "name": "qapi-dashboard",
+  "name": "qapi-brain",
   "builds": [
     {
-      "src": "dashboard/**/*.html",
+      "src": "apps/core/api/*.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dashboard/**/*.{html,js}",
       "use": "@vercel/static"
     }
   ],
   "routes": [
-    { "src": "/",     "dest": "/dashboard/index.html" },
-    { "src": "/(.*)", "dest": "/dashboard/$1" }
+    { "src": "/api/resolve", "dest": "/apps/core/api/resolve.ts" },
+    { "src": "/",            "dest": "/dashboard/index.html" },
+    { "src": "/(.*)",        "dest": "/dashboard/$1" }
   ],
   "headers": [
     {
@@ -20,6 +25,12 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy",     "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
       ]
     },
     {

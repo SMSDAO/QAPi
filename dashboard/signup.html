@@ -227,6 +227,11 @@ const module = await client.resolve('express');`;
         setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
       });
     }
+
+    // Register service worker (cache-first for static assets, network-only for API)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   </script>
 </body>
 </html>
