@@ -44,7 +44,7 @@ function checkNodeVersion() {
 // ── Workspace packages to install ────────────────────────────────────────────
 
 const PACKAGES = [
-  { name: "@qapi/core (api)",   dir: "api" },
+  { name: "@qapi/core",         dir: "api" },
   { name: "@qapi/sdk",          dir: "sdk" },
   { name: "@qapi/core-brain",   dir: "apps/core" },
   { name: "@qapi/dashboard",    dir: "dashboard" },
@@ -84,6 +84,18 @@ for (const pkg of PACKAGES) {
 
 if (failed > 0) {
   log("error", `Bootstrap finished with ${failed} error(s). Fix the issues above and re-run.`);
+  process.exit(1);
+}
+
+// Build apps/core so its CJS dist/ is available before the API starts.
+// (api/package.json has @qapi/core-brain as a file dep; the dist files must
+// exist before the API server or its tests can require() them.)
+try {
+  log("info", "Building @qapi/core-brain (libs → dist/)…");
+  run("npm run build", path.join(ROOT, "apps/core"));
+  log("ok", "@qapi/core-brain built ✓");
+} catch (err) {
+  log("error", `Failed to build @qapi/core-brain: ${err.message}`);
   process.exit(1);
 }
 

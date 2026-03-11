@@ -3,13 +3,25 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "engines": {"node": ">=22"},
+  "engines": {"node": ">=18"},
+  "exports": {
+    "./lib/tier-manager": {
+      "require": "./dist/tier-manager.cjs",
+      "import": "./dist/tier-manager.mjs"
+    },
+    "./lib/module-resolver": {
+      "require": "./dist/module-resolver.cjs",
+      "import": "./dist/module-resolver.mjs"
+    }
+  },
   "scripts": {
+    "build": "node build.mjs",
     "test": "node --experimental-strip-types --import ./tests/ts-loader.js --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "^0.27.3",
     "typescript": "^5.7.3"
   }
 }

@@ -264,6 +264,68 @@ describe("GET /metrics/logs", () => {
   });
 });
 
+// ── GET /modules/stream ─────────────────────────────────────────────────
+describe("GET /modules/stream", () => {
+  const VALID_SHA = "a".repeat(40);
+  const GH_MODULE = `gh:expressjs/express@${VALID_SHA}:index.js`;
+
+  test("returns 401 without API key", async () => {
+    const { status } = await req("GET", `/modules/stream?module=${encodeURIComponent(GH_MODULE)}`);
+    assert.equal(status, 401);
+  });
+
+  test("returns 400 when module param is missing", async () => {
+    const { status, body } = await req("GET", "/modules/stream", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 400);
+    assert.equal(body.code, "STREAM_MISSING_MODULE");
+  });
+
+  test("returns 400 for an invalid module ID format", async () => {
+    const { status, body } = await req("GET", "/modules/stream?module=not-valid", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 400);
+    assert.equal(body.code, "STREAM_INVALID_MODULE_ID");
+  });
+
+  test("returns 400 when SHA is not 40 hex chars", async () => {
+    const { status, body } = await req("GET", "/modules/stream?module=gh:owner/repo@abc123:index.js", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 400);
+    assert.equal(body.code, "STREAM_INVALID_MODULE_ID");
+  });
+
+  test("returns 400 for path-traversal in module ID", async () => {
+    const { status, body } = await req(
+      "GET",
+      `/modules/stream?module=${encodeURIComponent(`gh:owner/repo@${VALID_SHA}:../etc/passwd`)}`,
+      { headers: { "X-QAPi-Key": "qapi-starter-demo-key" } }
+    );
+    assert.equal(status, 400);
+    assert.equal(body.code, "STREAM_INVALID_MODULE_ID");
+  });
+
+  test("returns 403 for blob module on starter tier", async () => {
+    const { status, body } = await req("GET", "/modules/stream?module=blob:libs/util.js", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 403);
+    assert.equal(body.code, "STREAM_TIER_INSUFFICIENT");
+    assert.equal(body.requiredTier, "pro");
+  });
+
+  test("returns 503 for blob module when QAPI_BLOB_BASE_URL is not set", async () => {
+    const { status, body } = await req("GET", "/modules/stream?module=blob:libs/util.js", {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+    });
+    assert.equal(status, 503);
+    assert.equal(body.code, "STREAM_BLOB_NOT_CONFIGURED");
+  });
+});
+
 // ── 404 fallback ──────────────────────────────────────────────────────────
 describe("404 fallback", () => {
   test("returns 404 for unknown routes", async () => {

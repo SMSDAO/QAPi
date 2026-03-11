@@ -2,16 +2,20 @@
 "use strict";
 
 const { findKey, TIERS } = require("../data/keyStore");
+const { parseBearerToken, tierFromToken } = require("@qapi/core-brain/lib/tier-manager");
 
 /**
  * Reads the API key from the `X-QAPi-Key` header (or `Authorization: Bearer <key>`),
  * validates it against the key store, and attaches `req.qapiKey` (tier, id, email)
  * to the request before forwarding.
+ *
+ * Token extraction uses the same parseBearerToken logic as the Vercel resolver
+ * (apps/core/lib/tier-manager) so both runtimes behave identically.
  */
 function apiKeyMiddleware(req, res, next) {
   const raw =
     req.headers["x-qapi-key"] ||
-    (req.headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
+    parseBearerToken(req.headers["authorization"] ?? null);
 
   if (!raw) {
     return res.status(401).json({ error: "Missing API key. Supply X-QAPi-Key header.", code: "AUTH_MISSING_KEY" });
@@ -23,6 +27,7 @@ function apiKeyMiddleware(req, res, next) {
   }
 
   req.qapiKey = record;
+  req.qapiRawKey = raw;   // stored for downstream audit logging (e.g. stream endpoint)
   req.qapiTier = record.tier;
   req.qapiTierConfig = TIERS[record.tier];
   next();
@@ -50,4 +55,8 @@ function requireTier(minTier) {
   };
 }
 
-module.exports = { apiKeyMiddleware, requireTier };
+/**
+ * Exports tierFromToken so routes can verify token-implied tier matches
+ * the stored tier (belt-and-suspenders for the stream endpoint).
+ */
+module.exports = { apiKeyMiddleware, requireTier, tierFromToken };

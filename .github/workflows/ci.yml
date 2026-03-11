@@ -10,15 +10,37 @@ permissions:
   contents: read
 
 jobs:
+  build-core:
+    name: Build core-brain lib
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npm run build
+      - name: Verify build artifacts
+        run: |
+          test -f dist/tier-manager.cjs && \
+          test -f dist/module-resolver.cjs && \
+          echo "core-brain artifacts OK"
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-brain-dist
+          path: apps/core/dist/
+
   test-api:
     name: API Tests (Node ${{ matrix.node }})
+    needs: build-core
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node: ["18", "20", "22"]
-    defaults:
-      run:
-        working-directory: api
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,11 +48,19 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "npm"
           cache-dependency-path: api/package-lock.json
-      - run: npm ci
-      - run: npm test
+      - name: Download core-brain dist
+        uses: actions/download-artifact@v4
+        with:
+          name: core-brain-dist
+          path: apps/core/dist/
+      - name: Install API dependencies
+        run: cd api && npm ci
+      - name: Run API tests
+        run: cd api && npm test
 
   test-sdk:
     name: SDK Tests (Node ${{ matrix.node }})
+    needs: build-core
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -41,7 +71,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "npm"
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: sdk/package-lock.json
+      - name: Download core-brain dist
+        uses: actions/download-artifact@v4
+        with:
+          name: core-brain-dist
+          path: apps/core/dist/
       - name: Install API dependencies (SDK tests start the API server)
         run: cd api && npm ci
       - name: Run SDK tests
