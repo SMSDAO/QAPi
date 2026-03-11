@@ -2,7 +2,7 @@
 "use strict";
 
 const express = require("express");
-const { requireTier, tierFromToken } = require("../middleware/auth");
+const { requireTier } = require("../middleware/auth");
 const { listNodes, getNode, findNodeByName, upsertNode } = require("../data/moduleStore");
 const { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } = require("@qapi/core-brain/lib/module-resolver");
 const { redactToken } = require("@qapi/core-brain/lib/tier-manager");
@@ -146,7 +146,8 @@ router.get("/stream", async (req, res, next) => {
 
     if (etag) res.setHeader("ETag", etag);
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.setHeader("Vary", "X-QAPi-Key, Authorization");
 
     // Audited tier: emit a structured audit log entry.
     // We must buffer the body to know its byte size for the log entry.

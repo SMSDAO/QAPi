@@ -352,6 +352,14 @@ describe("GET /v1/tiers", () => {
     assert.equal(status, 200);
     assert.equal(body.callerTier, "pro");
   });
+
+  test("does NOT include callerTier for a key not in the store", async () => {
+    const { status, body } = await req("GET", "/v1/tiers", {
+      headers: { "X-QAPi-Key": "qapi-audited-spoofed-fake-key" },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.callerTier, undefined);
+  });
 });
 
 describe("GET /v1/tiers/:tierId", () => {

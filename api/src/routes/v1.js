@@ -6,12 +6,12 @@
 "use strict";
 
 const express = require("express");
-const { TIERS } = require("../data/keyStore");
+const { TIERS, findKey } = require("../data/keyStore");
 const { listNodes, findNodeBySha } = require("../data/moduleStore");
-const { apiKeyMiddleware, requireTier } = require("../middleware/auth");
+const { apiKeyMiddleware } = require("../middleware/auth");
 const { rateLimitMiddleware } = require("../middleware/rateLimit");
 const { parseGhModuleId, ghRawUrl } = require("@qapi/core-brain/lib/module-resolver");
-const { tierFromToken, parseBearerToken } = require("@qapi/core-brain/lib/tier-manager");
+const { parseBearerToken } = require("@qapi/core-brain/lib/tier-manager");
 
 const router = express.Router();
 
@@ -30,12 +30,13 @@ const TIER_ORDER = ["starter", "pro", "audited"];
  * response so the dashboard can highlight the caller's current plan.
  */
 router.get("/tiers", (req, res) => {
-  // Non-blocking: try to detect the caller's tier from an optional auth header.
-  // Uses core-brain's tierFromToken so the pattern matches the rest of the system.
+  // Detect caller's tier from an optional auth header by validating the key
+  // against the key store — prevents spoofing via crafted key prefixes.
   const rawKey = req.headers["x-qapi-key"] ||
     parseBearerToken(req.headers["authorization"] ?? null);
 
-  const callerTierHint = rawKey ? tierFromToken(rawKey) : null;
+  const keyRecord = rawKey ? findKey(rawKey) : null;
+  const callerTier = keyRecord ? keyRecord.tier : null;
 
   res.json({
     tiers: Object.entries(TIERS).map(([id, cfg]) => ({
@@ -45,7 +46,7 @@ router.get("/tiers", (req, res) => {
       callsPerMin: cfg.callsPerMin === Infinity ? null : cfg.callsPerMin,
       features: cfg.features,
     })),
-    ...(callerTierHint ? { callerTier: callerTierHint } : {}),
+    ...(callerTier ? { callerTier } : {}),
   });
 });
 

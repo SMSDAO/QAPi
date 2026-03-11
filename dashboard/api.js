@@ -128,7 +128,12 @@
     const res = await apiFetch(`/modules/resolve?name=${encodeURIComponent(name)}`, {
       headers: { "X-QAPi-Key": apiKey },
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      const message = (data && (data.error || data.message)) || `Module resolve failed (${res.status})`;
+      throw new Error(message);
+    }
+    return data;
   }
 
   /**
