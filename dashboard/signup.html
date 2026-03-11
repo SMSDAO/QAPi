@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up — QAPi Virtual Module Resolver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: { flash: 'flash 1.4s ease-in-out infinite' },
+          keyframes: { flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .glow-cyan   { text-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff; }
+    .glow-purple { text-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff; }
+    .glow-green  { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88; }
+    .box-glow-cyan   { box-shadow: 0 0 12px #00f5ff44, inset 0 0 12px #00f5ff11; }
+    .box-glow-purple { box-shadow: 0 0 12px #bf00ff44, inset 0 0 12px #bf00ff11; }
+    .box-glow-green  { box-shadow: 0 0 12px #00ff8844, inset 0 0 12px #00ff8811; }
+    input:focus, select:focus { outline: none; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d0d1a; } ::-webkit-scrollbar-thumb { background: #00f5ff44; border-radius: 3px; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen flex flex-col">
+
+  <!-- bg grid -->
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0" style="background-image:linear-gradient(rgba(0,245,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.04) 1px,transparent 1px);background-size:40px 40px;"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="flex items-center gap-6 text-sm">
+        <a href="index.html"  class="text-gray-400 hover:text-neon-cyan transition-colors">Dashboard</a>
+        <a href="docs.html"   class="text-gray-400 hover:text-neon-cyan transition-colors">Docs</a>
+        <a href="signup.html" class="text-neon-cyan border-b border-neon-cyan pb-0.5">Signup</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="relative z-10 flex-1 flex items-center justify-center py-20 px-6">
+    <div class="w-full max-w-lg">
+
+      <div class="text-center mb-10">
+        <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-3 animate-flash">● Create your API Key</p>
+        <h1 class="text-4xl font-bold mb-3"><span class="glow-cyan text-neon-cyan">Get Started</span></h1>
+        <p class="text-gray-400 text-sm">Receive your QAPi key in seconds. No credit card required for Starter.</p>
+      </div>
+
+      <!-- Tier Selector -->
+      <div class="flex gap-3 mb-8" id="tier-selector" role="radiogroup" aria-label="Select subscription tier">
+        <button data-tier="starter"  aria-pressed="true"  class="tier-btn flex-1 py-3 rounded-lg border border-neon-green  text-neon-green  text-sm font-bold selected-tier" style="background:rgba(0,255,136,0.08)">
+          Starter<br/><span class="text-xs font-normal text-gray-400">Free</span>
+        </button>
+        <button data-tier="pro"      aria-pressed="false" class="tier-btn flex-1 py-3 rounded-lg border border-gray-700 text-gray-400 text-sm font-bold hover:border-neon-cyan hover:text-neon-cyan transition-all">
+          Pro<br/><span class="text-xs font-normal text-gray-400">$4/mo</span>
+        </button>
+        <button data-tier="audited"  aria-pressed="false" class="tier-btn flex-1 py-3 rounded-lg border border-gray-700 text-gray-400 text-sm font-bold hover:border-neon-purple hover:text-neon-purple transition-all">
+          Audited<br/><span class="text-xs font-normal text-gray-400">Custom</span>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form id="signup-form" novalidate class="space-y-5">
+        <input type="hidden" id="selected-tier" value="starter" />
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5 tracking-widest uppercase" for="email">Email Address</label>
+          <input id="email" type="email" autocomplete="email" required
+            placeholder="dev@example.com"
+            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white text-sm focus:border-neon-cyan transition-colors placeholder-gray-600 box-glow-cyan" />
+          <p id="email-error" class="text-red-400 text-xs mt-1 hidden">Please enter a valid email address.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5 tracking-widest uppercase" for="name">Full Name <span class="text-gray-600">(optional)</span></label>
+          <input id="name" type="text" autocomplete="name"
+            placeholder="Alice Dev"
+            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white text-sm focus:border-neon-cyan transition-colors placeholder-gray-600" />
+        </div>
+
+        <button id="submit-btn" type="submit"
+          class="w-full py-3 rounded-lg bg-neon-cyan text-gray-950 font-bold text-sm hover:scale-[1.02] active:scale-[0.98] transition-transform box-glow-cyan">
+          <span id="btn-text">Generate API Key →</span>
+          <span id="btn-spinner" class="hidden">⟳ Creating key…</span>
+        </button>
+
+        <p class="text-center text-xs text-gray-600">By signing up you agree to our <a href="docs.html#terms" class="hover:text-neon-cyan transition-colors">Terms of Service</a>.</p>
+      </form>
+
+      <!-- Success box (hidden by default) -->
+      <div id="success-box" class="hidden mt-8 rounded-xl border border-neon-green bg-gray-900 p-6 box-glow-green">
+        <p class="text-neon-green glow-green font-bold mb-3 text-sm">✔ API Key Created Successfully!</p>
+        <p class="text-xs text-gray-400 mb-2">Your key — keep it secret:</p>
+        <div class="flex items-center gap-2">
+          <code id="api-key-display" class="flex-1 bg-gray-950 border border-gray-700 rounded px-3 py-2 text-neon-cyan text-xs break-all"></code>
+          <button id="copy-btn" onclick="copyKey()" class="px-3 py-2 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all flex-shrink-0">Copy</button>
+        </div>
+        <p class="text-xs text-gray-500 mt-4">Add it to your project:</p>
+        <pre class="bg-gray-950 rounded p-3 text-xs text-neon-cyan mt-2 overflow-x-auto"><code id="sdk-snippet"></code></pre>
+        <a href="docs.html" class="mt-4 block text-center text-xs text-neon-cyan hover:underline">→ Read the full SDK docs</a>
+      </div>
+
+      <!-- Error box -->
+      <div id="error-box" class="hidden mt-6 rounded-xl border border-red-500 bg-gray-900 p-4">
+        <p class="text-red-400 text-sm" id="error-msg">Something went wrong.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-gray-800 py-8 text-center text-gray-600 text-xs">
+    <p>QAPi © 2026 GXQ STUDIO — MIT License</p>
+  </footer>
+
+  <script>
+    // ── Tier selection ────────────────────────────────────────────────────────
+    const tierColors = {
+      starter: { border: 'border-neon-green',  text: 'text-neon-green',  bg: 'rgba(0,255,136,0.08)' },
+      pro:     { border: 'border-neon-cyan',   text: 'text-neon-cyan',   bg: 'rgba(0,245,255,0.08)' },
+      audited: { border: 'border-neon-purple', text: 'text-neon-purple', bg: 'rgba(191,0,255,0.08)'  },
+    };
+
+    document.querySelectorAll('.tier-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tier = btn.dataset.tier;
+        document.getElementById('selected-tier').value = tier;
+
+        document.querySelectorAll('.tier-btn').forEach((b) => {
+          const t = b.dataset.tier;
+          b.style.background = '';
+          b.setAttribute('aria-pressed', 'false');
+          b.className = `tier-btn flex-1 py-3 rounded-lg border border-gray-700 text-gray-400 text-sm font-bold hover:border-neon-cyan hover:text-neon-cyan transition-all`;
+        });
+
+        const c = tierColors[tier];
+        btn.style.background = c.bg;
+        btn.setAttribute('aria-pressed', 'true');
+        btn.className = `tier-btn flex-1 py-3 rounded-lg border ${c.border} ${c.text} text-sm font-bold`;
+      });
+    });
+
+    // Pre-select tier from URL ?tier=
+    const urlTier = new URLSearchParams(location.search).get('tier');
+    if (urlTier && ['starter','pro','audited'].includes(urlTier)) {
+      document.querySelector(`[data-tier="${urlTier}"]`)?.click();
+    }
+
+    // ── Form submission ───────────────────────────────────────────────────────
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const tier  = document.getElementById('selected-tier').value;
+
+      // Client-side validation
+      if (!email || !email.includes('@')) {
+        document.getElementById('email-error').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('email-error').classList.add('hidden');
+
+      // UI loading state
+      document.getElementById('btn-text').classList.add('hidden');
+      document.getElementById('btn-spinner').classList.remove('hidden');
+      document.getElementById('submit-btn').disabled = true;
+      document.getElementById('error-box').classList.add('hidden');
+
+      try {
+        // Call the QAPi signup endpoint
+        const res = await fetch('/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, tier }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Signup failed');
+
+        // Show success
+        document.getElementById('signup-form').classList.add('hidden');
+        document.getElementById('api-key-display').textContent = data.apiKey;
+        document.getElementById('sdk-snippet').textContent =
+`const { QAPiClient } = require('@qapi/sdk');
+const client = new QAPiClient({ apiKey: '${data.apiKey}' });
+const module = await client.resolve('express');`;
+        document.getElementById('success-box').classList.remove('hidden');
+        window._qapiKey = data.apiKey;
+
+      } catch (err) {
+        document.getElementById('error-msg').textContent = err.message;
+        document.getElementById('error-box').classList.remove('hidden');
+      } finally {
+        document.getElementById('btn-text').classList.remove('hidden');
+        document.getElementById('btn-spinner').classList.add('hidden');
+        document.getElementById('submit-btn').disabled = false;
+      }
+    });
+
+    function copyKey() {
+      const key = document.getElementById('api-key-display').textContent;
+      navigator.clipboard.writeText(key).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = '✔ Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

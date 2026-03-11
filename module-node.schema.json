@@ -1,0 +1,327 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qapi.dev/schemas/module-node.schema.json",
+  "title": "QAPi Module Node",
+  "description": "Metadata schema for a globally hosted module node tracked by the QAPi virtual module resolver",
+  "type": "object",
+  "required": ["id", "name", "version", "source", "tier", "status", "audit", "registry", "timestamps"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique module node identifier (UUID v4)",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "example": "a1b2c3d4-e5f6-4789-ab01-23456789cdef"
+    },
+    "name": {
+      "type": "string",
+      "description": "Package / module name (npm-compatible)",
+      "minLength": 1,
+      "maxLength": 214,
+      "pattern": "^(@[a-z0-9-~][a-z0-9-._~]*/)?[a-z0-9-~][a-z0-9-._~]*$",
+      "example": "express"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the module",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "example": "4.18.2"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the module provides",
+      "maxLength": 512
+    },
+    "source": {
+      "type": "object",
+      "description": "Origin source configuration for this module node",
+      "required": ["type", "url"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["github", "vps", "npm", "private"],
+          "description": "Where the module is physically hosted"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical URL or clone URL of the module source"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Git branch to track (for github/vps sources)",
+          "default": "main"
+        },
+        "entrypoint": {
+          "type": "string",
+          "description": "Relative path to the main entry file",
+          "default": "index.js"
+        },
+        "sha": {
+          "type": "string",
+          "description": "Current resolved commit SHA (40-char hex)",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "privateVps": {
+          "type": "boolean",
+          "description": "Whether this module lives on a dedicated private VPS node",
+          "default": false
+        },
+        "region": {
+          "type": "string",
+          "description": "Hosting region / data-centre closest to the module cache node",
+          "enum": ["us-east-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "tier": {
+      "type": "string",
+      "description": "Minimum subscription tier required to resolve this module",
+      "enum": ["starter", "pro", "audited"],
+      "default": "starter"
+    },
+    "status": {
+      "type": "string",
+      "description": "Current health / availability status of the node",
+      "enum": ["active", "degraded", "offline", "deprecated", "quarantined"],
+      "default": "active"
+    },
+    "audit": {
+      "type": "object",
+      "description": "Real-time security audit state for this module",
+      "required": ["score", "vulnerabilities", "lastScannedAt", "passed"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "description": "0–100 composite security score (higher is safer)",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether the module cleared the last security scan"
+        },
+        "vulnerabilities": {
+          "type": "object",
+          "description": "Vulnerability counts by severity level",
+          "properties": {
+            "critical": { "type": "integer", "minimum": 0, "default": 0 },
+            "high":     { "type": "integer", "minimum": 0, "default": 0 },
+            "moderate": { "type": "integer", "minimum": 0, "default": 0 },
+            "low":      { "type": "integer", "minimum": 0, "default": 0 },
+            "info":     { "type": "integer", "minimum": 0, "default": 0 }
+          },
+          "additionalProperties": false
+        },
+        "cve": {
+          "type": "array",
+          "description": "List of known CVE identifiers affecting this version",
+          "items": {
+            "type": "string",
+            "pattern": "^CVE-\\d{4}-\\d{4,}$"
+          },
+          "uniqueItems": true
+        },
+        "lastScannedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 timestamp of the most recent security scan"
+        },
+        "scanEngine": {
+          "type": "string",
+          "description": "Name of the scan engine used",
+          "default": "qapi-audit-v1"
+        },
+        "zeroDay": {
+          "type": "boolean",
+          "description": "Flag raised when a zero-day vulnerability is detected",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "cache": {
+      "type": "object",
+      "description": "CDN / edge-cache configuration for this module node",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "ttlSeconds": { "type": "integer", "minimum": 0, "default": 3600 },
+        "dedicatedCache": {
+          "type": "boolean",
+          "description": "Pro/Audited tier feature: dedicated cache node",
+          "default": false
+        },
+        "hitCount": {
+          "type": "integer",
+          "description": "Total cache hits since last reset",
+          "minimum": 0,
+          "default": 0
+        },
+        "missCount": {
+          "type": "integer",
+          "description": "Total cache misses since last reset",
+          "minimum": 0,
+          "default": 0
+        },
+        "lastPurgedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "registry": {
+      "type": "object",
+      "description": "Registry cross-references for this module",
+      "required": ["npm"],
+      "properties": {
+        "npm": {
+          "type": ["string", "null"],
+          "description": "Canonical npm package name (null if not published to npm)"
+        },
+        "github": {
+          "type": ["string", "null"],
+          "description": "GitHub slug in the format owner/repo"
+        },
+        "license": {
+          "type": "string",
+          "description": "SPDX license identifier",
+          "default": "MIT"
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 20
+        },
+        "homepage": {
+          "type": ["string", "null"],
+          "format": "uri"
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Resolved dependency tree – keys are module names, values are semver ranges",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Live usage metrics emitted by the QAPi Core Service",
+      "properties": {
+        "callsTotal":    { "type": "integer", "minimum": 0, "default": 0 },
+        "callsLastMin":  { "type": "integer", "minimum": 0, "default": 0 },
+        "avgLatencyMs":  { "type": "number",  "minimum": 0, "default": 0 },
+        "p99LatencyMs":  { "type": "number",  "minimum": 0, "default": 0 },
+        "errorRate":     { "type": "number",  "minimum": 0, "maximum": 1, "default": 0 },
+        "bandwidth":     {
+          "type": "object",
+          "properties": {
+            "inboundBytes":  { "type": "integer", "minimum": 0, "default": 0 },
+            "outboundBytes": { "type": "integer", "minimum": 0, "default": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamps": {
+      "type": "object",
+      "description": "Lifecycle timestamps for this module node record",
+      "required": ["createdAt", "updatedAt"],
+      "properties": {
+        "createdAt":     { "type": "string", "format": "date-time" },
+        "updatedAt":     { "type": "string", "format": "date-time" },
+        "deprecatedAt":  { "type": ["string", "null"], "format": "date-time" },
+        "lastResolvedAt":{ "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "description": "Operator-defined tags for grouping and filtering nodes",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "default": []
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary key-value pairs for operator / customer annotations",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "id": "a1b2c3d4-e5f6-4789-ab01-23456789cdef",
+      "name": "express",
+      "version": "4.18.2",
+      "description": "Fast, unopinionated, minimalist web framework for Node.js",
+      "source": {
+        "type": "github",
+        "url": "https://github.com/expressjs/express.git",
+        "branch": "master",
+        "entrypoint": "index.js",
+        "sha": "b8b4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2",
+        "privateVps": false,
+        "region": "us-east-1"
+      },
+      "tier": "starter",
+      "status": "active",
+      "audit": {
+        "score": 98,
+        "passed": true,
+        "vulnerabilities": { "critical": 0, "high": 0, "moderate": 0, "low": 1, "info": 2 },
+        "cve": [],
+        "lastScannedAt": "2026-03-11T05:00:00Z",
+        "scanEngine": "qapi-audit-v1",
+        "zeroDay": false
+      },
+      "cache": {
+        "enabled": true,
+        "ttlSeconds": 3600,
+        "dedicatedCache": false,
+        "hitCount": 120450,
+        "missCount": 340,
+        "lastPurgedAt": null
+      },
+      "registry": {
+        "npm": "express",
+        "github": "expressjs/express",
+        "license": "MIT",
+        "keywords": ["express", "framework", "web", "http", "rest"],
+        "homepage": "https://expressjs.com"
+      },
+      "dependencies": {
+        "accepts": "~1.3.8",
+        "body-parser": "1.20.1",
+        "methods": "~1.1.2"
+      },
+      "metrics": {
+        "callsTotal": 5000000,
+        "callsLastMin": 820,
+        "avgLatencyMs": 4.2,
+        "p99LatencyMs": 18.7,
+        "errorRate": 0.0002,
+        "bandwidth": {
+          "inboundBytes": 1048576,
+          "outboundBytes": 104857600
+        }
+      },
+      "timestamps": {
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-03-11T05:00:00Z",
+        "deprecatedAt": null,
+        "lastResolvedAt": "2026-03-11T05:07:00Z"
+      },
+      "tags": ["web", "framework", "popular"],
+      "metadata": {
+        "addedBy": "qapi-admin",
+        "notes": "Pinned to stable LTS stream"
+      }
+    }
+  ]
+}

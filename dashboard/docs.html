@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docs — QAPi Virtual Module Resolver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px); pointer-events:none; z-index:9999; }
+    .glow-cyan   { text-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff; }
+    .glow-purple { text-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff; }
+    .glow-green  { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88; }
+    .box-glow-cyan { box-shadow: 0 0 12px #00f5ff44, inset 0 0 12px #00f5ff11; }
+    pre { overflow-x: auto; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:#0d0d1a; } ::-webkit-scrollbar-thumb { background:#00f5ff44; border-radius:3px; }
+    /* Sidebar active link */
+    .sidebar-link.active { color: #00f5ff; border-left-color: #00f5ff; }
+    .sidebar-link { border-left: 2px solid transparent; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen flex flex-col">
+
+  <!-- bg grid -->
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0" style="background-image:linear-gradient(rgba(0,245,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.04) 1px,transparent 1px);background-size:40px 40px;"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="flex items-center gap-6 text-sm">
+        <a href="index.html"  class="text-gray-400 hover:text-neon-cyan transition-colors">Dashboard</a>
+        <a href="docs.html"   class="text-neon-cyan border-b border-neon-cyan pb-0.5">Docs</a>
+        <a href="signup.html" class="text-gray-400 hover:text-neon-cyan transition-colors">Signup</a>
+        <a href="signup.html" class="px-4 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all">Get API Key</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Body: Sidebar + Content -->
+  <div class="relative z-10 flex-1 flex max-w-7xl mx-auto w-full px-6 py-12 gap-12">
+
+    <!-- Sidebar -->
+    <aside class="hidden lg:block w-56 flex-shrink-0">
+      <nav class="sticky top-24 space-y-1 text-sm" aria-label="Documentation navigation">
+        <p class="text-xs text-gray-600 uppercase tracking-widest mb-3">Getting Started</p>
+        <a href="#overview"    class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Overview</a>
+        <a href="#quickstart"  class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Quick Start</a>
+        <a href="#auth"        class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Authentication</a>
+        <p class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-6">SDK Reference</p>
+        <a href="#sdk-install" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Installation</a>
+        <a href="#sdk-client"  class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">QAPiClient</a>
+        <a href="#sdk-resolve" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">resolve()</a>
+        <a href="#sdk-list"    class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">list()</a>
+        <a href="#sdk-audit"   class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">audit()</a>
+        <p class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-6">API Reference</p>
+        <a href="#api-health"  class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">GET /health</a>
+        <a href="#api-tiers"   class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">GET /auth/tiers</a>
+        <a href="#api-signup"  class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">POST /auth/signup</a>
+        <a href="#api-modules" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">GET /modules</a>
+        <a href="#api-resolve" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">GET /modules/resolve</a>
+        <a href="#api-audit-scan" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">GET /audit/scan</a>
+        <a href="#api-audit-report" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">GET /audit/report</a>
+        <p class="text-xs text-gray-600 uppercase tracking-widest mb-3 mt-6">Infrastructure</p>
+        <a href="#tiers-table" class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Tier Comparison</a>
+        <a href="#schema"      class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Module Node Schema</a>
+        <a href="#bootstrap"   class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">bootstrap.ps1</a>
+        <a href="#terms"       class="sidebar-link block pl-3 py-1.5 text-gray-400 hover:text-neon-cyan transition-colors">Terms of Service</a>
+      </nav>
+    </aside>
+
+    <!-- Docs content -->
+    <article class="flex-1 min-w-0 space-y-16 text-sm leading-7">
+
+      <!-- ── Overview ── -->
+      <section id="overview">
+        <h1 class="text-4xl font-bold text-neon-cyan glow-cyan mb-6">QAPi Documentation</h1>
+        <p class="text-gray-300 text-base mb-4">QAPi is a <strong class="text-white">global, virtualized module provider</strong> — a "Streaming Service for Code." Instead of installing dependencies locally, your project resolves them through the QAPi SDK, which dynamically links to globally hosted repositories on GitHub or private VPS instances.</p>
+        <div class="grid md:grid-cols-3 gap-4 mt-6">
+          <div class="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <p class="text-neon-green font-bold mb-1">⚡ Starter</p>
+            <p class="text-gray-400 text-xs">Free. Public GitHub modules. 100 calls/min.</p>
+          </div>
+          <div class="rounded-lg border border-neon-cyan bg-gray-900 p-4 box-glow-cyan">
+            <p class="text-neon-cyan font-bold mb-1">🚀 Pro — $4/mo</p>
+            <p class="text-gray-400 text-xs">Private VPS modules. Dedicated cache. 1 000 calls/min.</p>
+          </div>
+          <div class="rounded-lg border border-neon-purple bg-gray-900 p-4">
+            <p class="text-neon-purple font-bold mb-1">🔐 Audited — Custom</p>
+            <p class="text-gray-400 text-xs">Zero-day scanning. 99.9% SLA. Unlimited calls.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Quick Start ── -->
+      <section id="quickstart">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">Quick Start</h2>
+
+        <h3 class="text-neon-purple font-bold mt-6 mb-2">1. Get an API key</h3>
+        <p class="text-gray-400 mb-3">Sign up at <a href="signup.html" class="text-neon-cyan hover:underline">qapi.dev/signup</a> or call the API directly:</p>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>curl -X POST https://api.qapi.dev/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","tier":"starter"}'</code></pre>
+
+        <h3 class="text-neon-purple font-bold mt-8 mb-2">2. Install the SDK</h3>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>npm install @qapi/sdk</code></pre>
+
+        <h3 class="text-neon-purple font-bold mt-8 mb-2">3. Resolve your first module</h3>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { QAPiClient } = require('@qapi/sdk');
+
+const client = new QAPiClient({ apiKey: 'qapi-starter-YOUR_KEY' });
+
+const result = await client.resolve('express');
+console.log(result.entrypoint); // → https://github.com/expressjs/express…</code></pre>
+      </section>
+
+      <!-- ── Auth ── -->
+      <section id="auth">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">Authentication</h2>
+        <p class="text-gray-400 mb-4">All protected endpoints require your API key. Supply it in one of two ways:</p>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code># Option 1: Custom header (recommended)
+X-QAPi-Key: qapi-starter-YOUR_KEY
+
+# Option 2: Bearer token
+Authorization: Bearer qapi-starter-YOUR_KEY</code></pre>
+        <p class="text-gray-500 text-xs mt-3">Keys are prefixed with their tier: <code class="text-neon-cyan">qapi-starter-</code>, <code class="text-neon-cyan">qapi-pro-</code>, <code class="text-neon-cyan">qapi-audited-</code>.</p>
+      </section>
+
+      <!-- ── SDK – Installation ── -->
+      <section id="sdk-install">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">SDK – Installation</h2>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>npm install @qapi/sdk
+# or
+yarn add @qapi/sdk</code></pre>
+        <p class="text-gray-400 mt-3">The SDK has <strong class="text-white">zero dependencies</strong>. It uses Node.js built-in <code class="text-neon-cyan">http</code>/<code class="text-neon-cyan">https</code> modules.</p>
+      </section>
+
+      <!-- ── SDK – QAPiClient ── -->
+      <section id="sdk-client">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">QAPiClient</h2>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { QAPiClient } = require('@qapi/sdk');
+
+const client = new QAPiClient({
+  apiKey:  'qapi-starter-YOUR_KEY',   // required
+  baseUrl: 'https://api.qapi.dev',    // optional, default shown
+  timeout: 10_000,                    // optional, ms
+});</code></pre>
+      </section>
+
+      <!-- ── SDK – resolve ── -->
+      <section id="sdk-resolve">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-2">client.resolve(name, version?)</h2>
+        <p class="text-gray-400 mb-4">Resolves a module node and returns its entrypoint URL. Results are cached in-process by <code class="text-neon-cyan">name@version</code>.</p>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const result = await client.resolve('express');
+// or pin a version:
+const result = await client.resolve('express', '4.18.2');
+
+// Returns:
+{
+  resolved: true,
+  name: 'express',
+  version: '4.18.2',
+  entrypoint: 'https://github.com/expressjs/express.git#master:index.js',
+  sourceType: 'github',
+  audit: { score: 98, passed: true, zeroDay: false },
+  cachedTtlSeconds: 3600,
+}</code></pre>
+        <p class="text-gray-500 text-xs mt-3">Throws <code class="text-neon-cyan">QAPiError</code> with <code>statusCode</code> 403 (tier too low) or 404 (not found).</p>
+      </section>
+
+      <!-- ── SDK – list ── -->
+      <section id="sdk-list">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-2">client.list(filter?)</h2>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { count, tier, modules } = await client.list({ name: 'express' });</code></pre>
+      </section>
+
+      <!-- ── SDK – audit ── -->
+      <section id="sdk-audit">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-2">client.audit(name, version?) <span class="text-neon-purple text-sm font-normal">[Audited tier]</span></h2>
+        <p class="text-gray-400 mb-4">Triggers a real-time security scan. Requires the <strong class="text-neon-purple">Audited</strong> tier.</p>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const result = await client.audit('express');
+// Returns:
+{
+  name: 'express', version: '4.18.2', id: '...',
+  audit: { score: 98, passed: true, vulnerabilities: { critical: 0, ... }, zeroDay: false },
+  status: 'active',
+}</code></pre>
+      </section>
+
+      <!-- ── API – Endpoints ── -->
+      <section id="api-health">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">API Reference</h2>
+
+        <div class="space-y-10">
+          <!-- health -->
+          <div>
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-green/10 text-neon-green border border-neon-green rounded px-2 py-0.5">GET</span><code class="text-white">/health</code><span class="text-gray-500 text-xs">No auth required</span></p>
+            <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>{ "status": "ok", "service": "qapi-core", "timestamp": "2026-03-11T05:00:00Z" }</code></pre>
+          </div>
+
+          <!-- /auth/tiers -->
+          <div id="api-tiers">
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-green/10 text-neon-green border border-neon-green rounded px-2 py-0.5">GET</span><code class="text-white">/auth/tiers</code><span class="text-gray-500 text-xs">No auth required</span></p>
+            <p class="text-gray-400 mb-2">Returns a description of all available subscription tiers.</p>
+          </div>
+
+          <!-- /auth/signup -->
+          <div id="api-signup">
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-purple/20 text-neon-purple border border-neon-purple rounded px-2 py-0.5">POST</span><code class="text-white">/auth/signup</code><span class="text-gray-500 text-xs">No auth required</span></p>
+            <p class="text-gray-400 mb-2">Creates a new API key.</p>
+            <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>// Body
+{ "email": "you@example.com", "tier": "starter" }
+
+// Response 201
+{
+  "message": "API key created successfully.",
+  "apiKey": "qapi-starter-a1b2c3d4-...",
+  "tier": "starter",
+  "email": "you@example.com",
+  "tierConfig": { "price": "Free", "callsPerMin": 100, "features": [...] }
+}</code></pre>
+          </div>
+
+          <!-- /modules -->
+          <div id="api-modules">
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-green/10 text-neon-green border border-neon-green rounded px-2 py-0.5">GET</span><code class="text-white">/modules</code><span class="text-gray-500 text-xs">Requires API key</span></p>
+            <p class="text-gray-400 mb-2">Lists all module nodes accessible to your tier. Optional query: <code class="text-neon-cyan">?name=&lt;search&gt;</code>.</p>
+          </div>
+
+          <!-- /modules/resolve -->
+          <div id="api-resolve">
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-green/10 text-neon-green border border-neon-green rounded px-2 py-0.5">GET</span><code class="text-white">/modules/resolve?name=&amp;version=</code><span class="text-gray-500 text-xs">Requires API key</span></p>
+            <p class="text-gray-400 mb-2">Resolves a module by name (and optionally version) and returns its entrypoint URL.</p>
+          </div>
+
+          <!-- /audit/scan -->
+          <div id="api-audit-scan">
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-green/10 text-neon-green border border-neon-green rounded px-2 py-0.5">GET</span><code class="text-white">/audit/scan?name=</code><span class="text-neon-purple text-xs border border-neon-purple/40 rounded px-1">Audited tier</span></p>
+            <p class="text-gray-400 mb-2">Triggers a real-time security scan on a module node. Returns audit scores, CVE list, and zero-day flag.</p>
+          </div>
+
+          <!-- /audit/report -->
+          <div id="api-audit-report">
+            <p class="flex items-center gap-3 mb-2"><span class="text-xs bg-neon-green/10 text-neon-green border border-neon-green rounded px-2 py-0.5">GET</span><code class="text-white">/audit/report</code><span class="text-neon-purple text-xs border border-neon-purple/40 rounded px-1">Audited tier</span></p>
+            <p class="text-gray-400 mb-2">Returns a full audit summary across all module nodes.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Tier table ── -->
+      <section id="tiers-table">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-6">Tier Comparison</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="border-b border-gray-700 text-left text-xs uppercase tracking-widest text-gray-500">
+                <th class="pb-3 pr-6">Feature</th>
+                <th class="pb-3 pr-6 text-neon-green">Starter</th>
+                <th class="pb-3 pr-6 text-neon-cyan">Pro</th>
+                <th class="pb-3 text-neon-purple">Audited</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-400 divide-y divide-gray-800">
+              <tr><td class="py-2.5 pr-6">Price</td><td class="text-neon-green pr-6">Free</td><td class="text-neon-cyan pr-6">$4/mo</td><td class="text-neon-purple">Custom</td></tr>
+              <tr><td class="py-2.5 pr-6">Public GitHub repos</td><td class="pr-6">✔</td><td class="pr-6">✔</td><td>✔</td></tr>
+              <tr><td class="py-2.5 pr-6">Private VPS modules</td><td class="pr-6">✗</td><td class="text-neon-cyan pr-6">✔</td><td>✔</td></tr>
+              <tr><td class="py-2.5 pr-6">Dedicated cache</td><td class="pr-6">✗</td><td class="text-neon-cyan pr-6">✔</td><td>✔</td></tr>
+              <tr><td class="py-2.5 pr-6">Rate limit (calls/min)</td><td class="pr-6">100</td><td class="text-neon-cyan pr-6">1 000</td><td class="text-neon-purple">Unlimited</td></tr>
+              <tr><td class="py-2.5 pr-6">Zero-day scanning</td><td class="pr-6">✗</td><td class="pr-6">✗</td><td class="text-neon-purple">✔</td></tr>
+              <tr><td class="py-2.5 pr-6">Security audit report</td><td class="pr-6">✗</td><td class="pr-6">✗</td><td class="text-neon-purple">✔</td></tr>
+              <tr><td class="py-2.5 pr-6">SLA</td><td class="pr-6">Best effort</td><td class="pr-6">Best effort</td><td class="text-neon-purple">99.9%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Schema ── -->
+      <section id="schema">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">Module Node Schema</h2>
+        <p class="text-gray-400 mb-4">Every module in the QAPi registry is described by a <strong class="text-white">Module Node</strong> JSON object. The full JSON Schema is available at <code class="text-neon-cyan">module-node.schema.json</code> in the repository root.</p>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>{
+  "id":      "a1b2c3d4-e5f6-4789-ab01-23456789cdef",  // UUID v4
+  "name":    "express",
+  "version": "4.18.2",
+  "source": {
+    "type":       "github",          // github | vps | npm | private
+    "url":        "https://github.com/expressjs/express.git",
+    "branch":     "master",
+    "entrypoint": "index.js",
+    "privateVps": false,
+    "region":     "us-east-1"
+  },
+  "tier":   "starter",               // starter | pro | audited
+  "status": "active",                // active | degraded | offline | deprecated | quarantined
+  "audit": {
+    "score":           98,           // 0–100
+    "passed":          true,
+    "vulnerabilities": { "critical":0, "high":0, "moderate":0, "low":1, "info":2 },
+    "cve":             [],
+    "zeroDay":         false,
+    "lastScannedAt":   "2026-03-11T05:00:00Z",
+    "scanEngine":      "qapi-audit-v1"
+  },
+  "cache":      { "enabled":true, "ttlSeconds":3600, "dedicatedCache":false, ... },
+  "registry":   { "npm":"express", "github":"expressjs/express", "license":"MIT", ... },
+  "metrics":    { "callsTotal":5000000, "avgLatencyMs":4.2, ... },
+  "timestamps": { "createdAt":"...", "updatedAt":"...", "lastResolvedAt":"..." }
+}</code></pre>
+      </section>
+
+      <!-- ── Bootstrap ── -->
+      <section id="bootstrap">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">bootstrap.ps1 — Virtual Node Orchestrator</h2>
+        <p class="text-gray-400 mb-4">The <code class="text-neon-cyan">bootstrap.ps1</code> script configures your local machine to use QAPi as the module resolver instead of <code class="text-neon-cyan">node_modules</code>.</p>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code># Windows / PowerShell 7+
+irm https://raw.githubusercontent.com/SMSDAO/QAPi/main/bootstrap.ps1 | iex
+
+# Then in your project:
+$env:QAPI_KEY = "qapi-starter-YOUR_KEY"
+node -r @qapi/sdk/register ./your-app.js</code></pre>
+      </section>
+
+      <!-- ── Terms ── -->
+      <section id="terms">
+        <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">Terms of Service</h2>
+        <p class="text-gray-400">QAPi is provided as-is under the MIT License. By using QAPi you agree not to abuse the service, share API keys publicly, or use QAPi to distribute malicious code. GXQ STUDIO reserves the right to revoke keys that violate these terms.</p>
+      </section>
+
+    </article>
+  </div>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-gray-800 py-10 text-center text-gray-600 text-xs">
+    <p>QAPi © 2026 GXQ STUDIO — MIT License</p>
+  </footer>
+
+  <!-- Sidebar active link highlight -->
+  <script>
+    const links = document.querySelectorAll('.sidebar-link');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          links.forEach((l) => l.classList.remove('active'));
+          const match = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
+          if (match) match.classList.add('active');
+        }
+      });
+    }, { rootMargin: '0px 0px -60% 0px' });
+
+    document.querySelectorAll('section[id]').forEach((s) => observer.observe(s));
+  </script>
+</body>
+</html>

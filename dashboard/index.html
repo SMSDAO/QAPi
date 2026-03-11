@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QAPi — Virtual Module Resolver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' },
+          },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: {
+            'pulse-fast': 'pulse 0.8s cubic-bezier(0.4,0,0.6,1) infinite',
+            'flash': 'flash 1.4s ease-in-out infinite',
+            'scan': 'scan 3s linear infinite',
+            'float': 'float 4s ease-in-out infinite',
+          },
+          keyframes: {
+            flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
+            scan: { '0%': { transform: 'translateY(-100%)' }, '100%': { transform: 'translateY(100vh)' } },
+            float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    /* ── Neo Scan line overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 245, 255, 0.02) 2px,
+        rgba(0, 245, 255, 0.02) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+    /* ── Neon glow utilities ── */
+    .glow-cyan  { text-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff; }
+    .glow-purple{ text-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff; }
+    .glow-green { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88; }
+    .box-glow-cyan  { box-shadow: 0 0 12px #00f5ff44, inset 0 0 12px #00f5ff11; }
+    .box-glow-purple{ box-shadow: 0 0 12px #bf00ff44, inset 0 0 12px #bf00ff11; }
+    .box-glow-green { box-shadow: 0 0 12px #00ff8844, inset 0 0 12px #00ff8811; }
+    /* ── Scrollbar styling ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d0d1a; }
+    ::-webkit-scrollbar-thumb { background: #00f5ff44; border-radius: 3px; }
+    /* ── Vertical call-trace line ── */
+    .trace-line { border-left: 2px solid #00f5ff44; position: relative; }
+    .trace-line::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; border-radius: 50%; background: #00f5ff; box-shadow: 0 0 10px #00f5ff; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+
+  <!-- ── Animated background grid ─────────────────────────────────────── -->
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0" style="background-image:linear-gradient(rgba(0,245,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.04) 1px,transparent 1px);background-size:40px 40px;"></div>
+  </div>
+
+  <!-- ── Top Nav ───────────────────────────────────────────────────────── -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-3 group">
+        <span class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest group-hover:animate-pulse">QA<span class="text-neon-purple glow-purple">Pi</span></span>
+        <span class="text-xs text-gray-500 hidden sm:block">Virtual Module Resolver</span>
+      </a>
+      <!-- Nav links -->
+      <div class="flex items-center gap-6 text-sm">
+        <a href="index.html"   class="text-neon-cyan  border-b border-neon-cyan pb-0.5">Dashboard</a>
+        <a href="docs.html"    class="text-gray-400 hover:text-neon-cyan transition-colors">Docs</a>
+        <a href="signup.html"  class="text-gray-400 hover:text-neon-cyan transition-colors">Signup</a>
+        <a href="signup.html"  class="px-4 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all box-glow-cyan">Get API Key</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+  <header class="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-16 text-center">
+    <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-4 animate-flash">● Live • QAPi Core Online</p>
+    <h1 class="text-5xl sm:text-7xl font-bold leading-tight mb-6">
+      <span class="glow-cyan text-neon-cyan">Stream Code.</span><br/>
+      <span class="glow-purple text-neon-purple">Skip node_modules.</span>
+    </h1>
+    <p class="text-gray-400 max-w-2xl mx-auto text-lg mb-10">
+      QAPi is a global, virtualized module provider. Your users <em class="text-neon-green glow-green not-italic">stream</em> dependencies via our SDK — no installs, no bloat, real-time security audits.
+    </p>
+    <div class="flex flex-wrap justify-center gap-4">
+      <a href="signup.html" class="px-8 py-3 rounded bg-neon-cyan text-gray-950 font-bold hover:scale-105 transition-transform box-glow-cyan">Start Free</a>
+      <a href="docs.html"   class="px-8 py-3 rounded border border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-gray-950 transition-all box-glow-purple">Read Docs</a>
+    </div>
+  </header>
+
+  <!-- ── Tier Cards ─────────────────────────────────────────────────────── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-6 pb-20">
+    <h2 class="text-center text-2xl font-bold text-neon-cyan glow-cyan mb-12 tracking-widest uppercase">Subscription Tiers</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+      <!-- Starter -->
+      <div class="rounded-xl border border-gray-700 bg-gray-900/60 p-8 flex flex-col gap-4 hover:border-neon-cyan transition-colors box-glow-cyan">
+        <div class="flex items-center justify-between">
+          <span class="text-xl font-bold text-white">Starter</span>
+          <span class="text-2xl font-bold text-neon-green glow-green">Free</span>
+        </div>
+        <ul class="text-sm text-gray-400 space-y-2 flex-1">
+          <li class="flex gap-2"><span class="text-neon-green">✔</span> Public GitHub repos</li>
+          <li class="flex gap-2"><span class="text-neon-green">✔</span> Standard latency</li>
+          <li class="flex gap-2"><span class="text-neon-green">✔</span> 100 calls / min</li>
+        </ul>
+        <a href="signup.html?tier=starter" class="mt-auto block text-center px-4 py-2 rounded border border-neon-green text-neon-green hover:bg-neon-green hover:text-gray-950 transition-all text-sm">Get Started</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="rounded-xl border border-neon-cyan bg-gray-900/80 p-8 flex flex-col gap-4 box-glow-cyan scale-105 relative">
+        <span class="absolute -top-4 left-1/2 -translate-x-1/2 bg-neon-cyan text-gray-950 text-xs font-bold px-4 py-1 rounded-full">MOST POPULAR</span>
+        <div class="flex items-center justify-between">
+          <span class="text-xl font-bold text-neon-cyan glow-cyan">Pro</span>
+          <span class="text-2xl font-bold text-neon-cyan glow-cyan">$4<span class="text-sm text-gray-400">/mo</span></span>
+        </div>
+        <ul class="text-sm text-gray-300 space-y-2 flex-1">
+          <li class="flex gap-2"><span class="text-neon-cyan">✔</span> Private VPS modules</li>
+          <li class="flex gap-2"><span class="text-neon-cyan">✔</span> Dedicated caching</li>
+          <li class="flex gap-2"><span class="text-neon-cyan">✔</span> 1 000 calls / min</li>
+          <li class="flex gap-2"><span class="text-neon-cyan">✔</span> Everything in Starter</li>
+        </ul>
+        <a href="signup.html?tier=pro" class="mt-auto block text-center px-4 py-2 rounded bg-neon-cyan text-gray-950 font-bold hover:scale-105 transition-transform text-sm">Upgrade to Pro</a>
+      </div>
+
+      <!-- Audited -->
+      <div class="rounded-xl border border-neon-purple bg-gray-900/60 p-8 flex flex-col gap-4 hover:border-neon-purple transition-colors box-glow-purple">
+        <div class="flex items-center justify-between">
+          <span class="text-xl font-bold text-neon-purple glow-purple">Audited</span>
+          <span class="text-2xl font-bold text-neon-purple glow-purple">Custom</span>
+        </div>
+        <ul class="text-sm text-gray-400 space-y-2 flex-1">
+          <li class="flex gap-2"><span class="text-neon-purple">✔</span> Full security monitoring</li>
+          <li class="flex gap-2"><span class="text-neon-purple">✔</span> Zero-day scanning</li>
+          <li class="flex gap-2"><span class="text-neon-purple">✔</span> 99.9% SLA</li>
+          <li class="flex gap-2"><span class="text-neon-purple">✔</span> Unlimited calls / min</li>
+          <li class="flex gap-2"><span class="text-neon-purple">✔</span> Everything in Pro</li>
+        </ul>
+        <a href="signup.html?tier=audited" class="mt-auto block text-center px-4 py-2 rounded border border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-gray-950 transition-all text-sm">Contact Sales</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Live Call Visualizer (Vertical Trace) ──────────────────────────── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-6 pb-24">
+    <h2 class="text-center text-2xl font-bold text-neon-cyan glow-cyan mb-12 tracking-widest uppercase">Live Module Call Trace</h2>
+    <div class="max-w-xl mx-auto space-y-0">
+
+      <div class="trace-line pl-8 pb-8">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+          <p class="text-xs text-gray-500 mb-1">① UI / Developer</p>
+          <p class="text-neon-cyan text-sm font-bold">client.resolve("express")</p>
+        </div>
+      </div>
+
+      <div class="trace-line pl-8 pb-8">
+        <div class="bg-gray-900 border border-neon-cyan/30 rounded-lg p-4 box-glow-cyan">
+          <p class="text-xs text-gray-500 mb-1">② QAPi SDK</p>
+          <p class="text-white text-sm">Sends <code class="text-neon-cyan">GET /modules/resolve?name=express</code></p>
+          <p class="text-xs text-gray-500 mt-1">Attaches <code class="text-neon-cyan">X-QAPi-Key</code> header</p>
+        </div>
+      </div>
+
+      <div class="trace-line pl-8 pb-8">
+        <div class="bg-gray-900 border border-neon-purple/30 rounded-lg p-4 box-glow-purple">
+          <p class="text-xs text-gray-500 mb-1">③ QAPi Core API</p>
+          <p class="text-white text-sm">Validates API key → checks tier → enforces rate limit</p>
+          <p class="text-xs text-neon-green mt-1">✔ Tier: starter  •  Rate: 42/100 calls/min</p>
+        </div>
+      </div>
+
+      <div class="trace-line pl-8 pb-8">
+        <div class="bg-gray-900 border border-neon-green/30 rounded-lg p-4 box-glow-green">
+          <p class="text-xs text-gray-500 mb-1">④ Security Audit Engine</p>
+          <p class="text-white text-sm">Scans module before delivery</p>
+          <p class="text-xs text-neon-green mt-1">✔ Score: 98/100  •  0 critical CVEs  •  No zero-days</p>
+        </div>
+      </div>
+
+      <div class="pl-8">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-4">
+          <p class="text-xs text-gray-500 mb-1">⑤ Module Delivered</p>
+          <p class="text-neon-green glow-green text-sm font-bold">{ resolved: true, entrypoint: "https://github.com/expressjs/express…" }</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Live Stats Counters ────────────────────────────────────────────── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-6 pb-24">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="rounded-xl bg-gray-900 border border-gray-700 p-6 text-center">
+        <p id="stat-resolves" class="text-4xl font-bold text-neon-cyan glow-cyan">0</p>
+        <p class="text-xs text-gray-500 mt-2 uppercase tracking-widest">Resolves / min</p>
+      </div>
+      <div class="rounded-xl bg-gray-900 border border-gray-700 p-6 text-center">
+        <p id="stat-modules" class="text-4xl font-bold text-neon-purple glow-purple">3</p>
+        <p class="text-xs text-gray-500 mt-2 uppercase tracking-widest">Module Nodes</p>
+      </div>
+      <div class="rounded-xl bg-gray-900 border border-gray-700 p-6 text-center">
+        <p id="stat-score" class="text-4xl font-bold text-neon-green glow-green">98</p>
+        <p class="text-xs text-gray-500 mt-2 uppercase tracking-widest">Avg Audit Score</p>
+      </div>
+      <div class="rounded-xl bg-gray-900 border border-gray-700 p-6 text-center">
+        <p id="stat-latency" class="text-4xl font-bold text-neon-yellow" style="color:#ffe600;text-shadow:0 0 8px #ffe600">4ms</p>
+        <p class="text-xs text-gray-500 mt-2 uppercase tracking-widest">Avg Latency</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ────────────────────────────────────────────────────────── -->
+  <footer class="relative z-10 border-t border-gray-800 py-10 text-center text-gray-600 text-xs">
+    <p class="mb-2">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
+    <p>MIT License • Built with Node.js + Tailwind CSS</p>
+  </footer>
+
+  <!-- ── Live counter animation ─────────────────────────────────────────── -->
+  <script>
+    // Simulate live counter updates
+    function animateCounter(el, target, duration) {
+      const start = parseInt(el.textContent) || 0;
+      const step = (target - start) / (duration / 50);
+      let current = start;
+      const timer = setInterval(() => {
+        current += step;
+        if ((step > 0 && current >= target) || (step < 0 && current <= target)) {
+          el.textContent = target;
+          clearInterval(timer);
+        } else {
+          el.textContent = Math.round(current);
+        }
+      }, 50);
+    }
+
+    // Kick off on load
+    window.addEventListener('DOMContentLoaded', () => {
+      animateCounter(document.getElementById('stat-resolves'), 1247, 1500);
+      animateCounter(document.getElementById('stat-modules'), 3, 500);
+      animateCounter(document.getElementById('stat-score'), 98, 1000);
+
+      // Simulate live resolves ticking up
+      setInterval(() => {
+        const el = document.getElementById('stat-resolves');
+        const v = parseInt(el.textContent);
+        el.textContent = v + Math.floor(Math.random() * 5);
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
