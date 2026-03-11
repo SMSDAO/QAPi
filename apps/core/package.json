@@ -1,1 +1,7 @@
-{\n  "name": "core",\n  "version": "1.0.0",\n  "scripts": {\n    "start": "vercel dev"\n  },\n  "dependencies": {}\n}
+{
+  "name": "@qapi/core-brain",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "engines": {"node": ">=18"}
+}
