@@ -3,5 +3,8 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "engines": {"node": ">=18"}
+  "engines": {"node": ">=18"},
+  "scripts": {
+    "test": "node --import ./tests/ts-loader.js --test tests/*.test.ts"
+  }
 }
