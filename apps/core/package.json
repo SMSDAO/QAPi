@@ -1,0 +1,1 @@
+{\n  "name": "core",\n  "version": "1.0.0",\n  "scripts": {\n    "start": "vercel dev"\n  },\n  "dependencies": {}\n}
