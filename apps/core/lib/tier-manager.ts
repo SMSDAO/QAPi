@@ -1,20 +1,18 @@
-export type Tier = {
-  id: string;
-  name: string;
-  level: number;
-};
+export type Tier = "starter" | "pro" | "audited";
 
-export const parseBearerToken = (token: string): string => {
-  return token.split(' ')[1];
-};
+export function parseBearerToken(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  return token || null;
+}
 
-export const tierFromToken = (token: string): Tier => {
-  const parsedToken = parseBearerToken(token);
-  // Example parsing logic; adjust based on token structure
-  const [id, name, level] = parsedToken.split('-');
-  return { id, name, level: parseInt(level, 10) };
-};
+export function tierFromToken(token: string): Tier {
+  const m = token.match(/^qapi-(starter|pro|audited)-/i);
+  return ((m?.[1]?.toLowerCase() ?? "starter") as Tier);
+}
 
-export const redactToken = (token: string): string => {
-  return token.replace(/(\w{6})\w+/, '$1...');
-};
+export function redactToken(token: string): string {
+  if (!token) return "";
+  if (token.length <= 12) return token.slice(0, 4) + "…";
+  return token.slice(0, 8) + "…" + token.slice(-4);
+}
