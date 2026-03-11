@@ -6,9 +6,11 @@ const cors = require("cors");
 
 const { apiKeyMiddleware } = require("./middleware/auth");
 const { rateLimitMiddleware } = require("./middleware/rateLimit");
+const { requestLogger } = require("./middleware/logger");
 const modulesRouter = require("./routes/modules");
 const authRouter = require("./routes/auth");
 const auditRouter = require("./routes/audit");
+const metricsRouter = require("./routes/metrics");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(requestLogger);
 
 // Health-check (no auth required)
 app.get("/health", (_req, res) =>
@@ -25,6 +28,9 @@ app.get("/health", (_req, res) =>
 
 // ── Public auth routes (signup / key generation) ──────────────────────────────
 app.use("/auth", authRouter);
+
+// ── Public metrics (no auth – for Vercel dashboard polling) ──────────────────
+app.use("/metrics", metricsRouter);
 
 // ── Protected routes – require a valid API key ────────────────────────────────
 app.use("/modules", apiKeyMiddleware, rateLimitMiddleware, modulesRouter);

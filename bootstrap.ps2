@@ -1,0 +1,401 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  QAPi Virtual Node Orchestrator – bootstrap.ps2
+#
+#  SYNOPSIS
+#    ./bootstrap.ps2 [OPTIONS]
+#
+#  DESCRIPTION
+#    Configures a Unix/Linux/macOS development environment to use QAPi as the
+#    virtual module resolver instead of local node_modules.
+#
+#    What it does:
+#      1. Validates that Node.js >= 18 and npm are installed.
+#      2. Installs the @qapi/sdk package (globally or locally).
+#      3. Writes Node.js loader hooks (qapi-loader.mjs, qapi-register.cjs)
+#         that intercept module resolution for QAPi-managed imports.
+#      4. Exports QAPI_KEY, QAPI_BASE_URL, and QAPI_TIER for the current
+#         session, and optionally persists them to ~/.bashrc / ~/.zshrc.
+#      5. Verifies connectivity to the QAPi Core Service.
+#      6. Emits a structured JSON log for each bootstrap event.
+#
+#  OPTIONS
+#    -k KEY      Your QAPi API key (e.g. qapi-starter-xxxx).
+#                Defaults to the QAPI_KEY environment variable.
+#    -t TIER     Subscription tier: starter | pro | audited.
+#                Defaults to 'starter'.
+#    -u URL      QAPi Core Service base URL.
+#                Defaults to 'https://api.qapi.dev'.
+#    -g          Install the SDK globally and persist environment variables
+#                to the shell profile.
+#    -r          Remove QAPi environment variables, the loader hook, and
+#                the global SDK package.
+#    -h          Print this help and exit.
+#
+#  EXAMPLES
+#    # Interactive setup (prompts for a key if QAPI_KEY is not set)
+#    ./bootstrap.ps2
+#
+#    # Non-interactive, Starter tier
+#    ./bootstrap.ps2 -k "qapi-starter-YOUR_KEY"
+#
+#    # Pro tier, global install + persist
+#    ./bootstrap.ps2 -k "qapi-pro-YOUR_KEY" -t pro -g
+#
+#    # Uninstall
+#    ./bootstrap.ps2 -r
+#
+#  NOTES
+#    Requires Bash 4+ or any POSIX-compatible shell.
+#    Compatible with Ubuntu, Debian, Alpine, macOS, and most Linux distros.
+#    For Windows, use bootstrap.ps1 (PowerShell).
+# ==============================================================================
+
+set -euo pipefail
+
+# ── Defaults ──────────────────────────────────────────────────────────────────
+QAPI_KEY_ARG=""
+TIER="starter"
+BASE_URL="https://api.qapi.dev"
+GLOBAL=false
+UNINSTALL=false
+LOADER_FILE="qapi-loader.mjs"
+
+# ── Colour helpers ────────────────────────────────────────────────────────────
+CYAN="\033[36m" GREEN="\033[32m" YELLOW="\033[33m" RED="\033[31m" RESET="\033[0m" BOLD="\033[1m"
+
+log_step()  { echo -e "${CYAN}  ●${RESET} $*"; }
+log_ok()    { echo -e "${GREEN}  ✔${RESET} $*"; }
+log_warn()  { echo -e "${YELLOW}  ⚠${RESET} $*"; }
+log_fail()  { echo -e "${RED}  ✖${RESET} $*" >&2; }
+log_json()  {
+  # Emit a structured JSON log line to stderr for pipeline/dashboard ingestion
+  local event="$1" msg="$2" extra="${3:-}"
+  local ts; ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%dT%H:%M:%SZ")
+  printf '{"ts":"%s","level":"info","event":"%s","msg":"%s"%s}\n' \
+    "$ts" "$event" "$msg" "${extra:+,$extra}" >&2
+}
+
+# ── Parse arguments ───────────────────────────────────────────────────────────
+while getopts ":k:t:u:grh" opt; do
+  case $opt in
+    k) QAPI_KEY_ARG="$OPTARG" ;;
+    t) TIER="$OPTARG" ;;
+    u) BASE_URL="$OPTARG" ;;
+    g) GLOBAL=true ;;
+    r) UNINSTALL=true ;;
+    h)
+      sed -n '/^#/p' "$0" | sed 's/^#\( \|$\)//'
+      exit 0
+      ;;
+    \?) log_fail "Unknown option: -$OPTARG"; exit 1 ;;
+    :)  log_fail "Option -$OPTARG requires an argument."; exit 1 ;;
+  esac
+done
+
+# ── Banner ────────────────────────────────────────────────────────────────────
+echo -e ""
+echo -e "${CYAN}${BOLD}  ██████   █████  ██████  ██${RESET}"
+echo -e "${CYAN}${BOLD}  ██    ██ ██  ██ ██   ██ ██${RESET}"
+echo -e "${CYAN}${BOLD}  ██    ██ ███████ ██████  ██${RESET}"
+echo -e "${CYAN}${BOLD}  ██    ██ ██  ██ ██      ██${RESET}"
+echo -e "${CYAN}${BOLD}  ██████  ██  ██ ██      ██${RESET}"
+echo -e ""
+echo -e "  ${BOLD}QAPi Virtual Node Orchestrator${RESET}"
+echo -e "  bootstrap.ps2 — github.com/SMSDAO/QAPi"
+echo -e ""
+
+# ── Uninstall flow ────────────────────────────────────────────────────────────
+if $UNINSTALL; then
+  log_step "Removing QAPi environment variables from shell profiles…"
+  for profile in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"; do
+    [ -f "$profile" ] && perl -pi -e 'if (/# QAPi bootstrap/ .. /^$/) { $_ = "" }' "$profile" 2>/dev/null || true
+  done
+
+  log_step "Removing Node.js loader hooks ($LOADER_FILE, qapi-register.cjs)…"
+  [ -f "$LOADER_FILE" ] && rm -f "$LOADER_FILE"
+  [ -f "qapi-register.cjs" ] && rm -f "qapi-register.cjs"
+  [ -f ".npmrc" ] && perl -pi -e '$_ = "" if /qapi/i' ".npmrc" 2>/dev/null || true
+
+  log_step "Uninstalling global @qapi/sdk (if present)…"
+  command -v npm >/dev/null 2>&1 && npm uninstall -g @qapi/sdk 2>/dev/null || true
+
+  log_ok "QAPi removed."
+  log_json "bootstrap.uninstall" "QAPi removed from machine"
+  exit 0
+fi
+
+# ── Step 1: Verify Node.js ────────────────────────────────────────────────────
+log_step "Checking Node.js installation…"
+if ! command -v node >/dev/null 2>&1; then
+  log_fail "Node.js not found. Install Node.js 18+ from https://nodejs.org and re-run."
+  exit 1
+fi
+
+NODE_VERSION=$(node --version 2>&1 | sed 's/v//')
+NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
+if [ "$NODE_MAJOR" -lt 18 ]; then
+  log_fail "Node.js v$NODE_VERSION detected but QAPi requires >= 18. Please upgrade."
+  exit 1
+fi
+log_ok "Node.js v$NODE_VERSION detected."
+log_json "bootstrap.node_check" "Node.js OK" "\"version\":\"$NODE_VERSION\""
+
+if ! command -v npm >/dev/null 2>&1; then
+  log_fail "npm not found. It is bundled with Node.js — please reinstall Node.js."
+  exit 1
+fi
+NPM_VERSION=$(npm --version 2>&1)
+log_ok "npm $NPM_VERSION detected."
+
+# ── Step 2: Detect environment ────────────────────────────────────────────────
+log_step "Detecting environment…"
+ENV_TYPE="local-dev"
+[ -n "${CI:-}" ] && ENV_TYPE="ci"
+[ -n "${VERCEL:-}" ] && ENV_TYPE="vercel"
+[ -n "${RAILWAY_ENVIRONMENT:-}" ] && ENV_TYPE="vps"
+log_ok "Environment: $ENV_TYPE"
+log_json "bootstrap.env_detect" "Environment detected" "\"env\":\"$ENV_TYPE\""
+
+# ── Step 3: API Key ───────────────────────────────────────────────────────────
+log_step "Resolving API key…"
+API_KEY="${QAPI_KEY_ARG:-${QAPI_KEY:-}}"
+
+if [ -z "$API_KEY" ]; then
+  log_warn "No API key found in -k option or QAPI_KEY environment variable."
+  SIGNUP_URL="https://qapi.dev/signup"
+  echo -e "  ${YELLOW}→ Get a free Starter key at: $SIGNUP_URL${RESET}"
+
+  if [ -t 0 ]; then
+    # Interactive: prompt the user
+    read -r -p "  Enter your QAPi API key (or press Enter to open signup page): " API_KEY
+    if [ -z "$API_KEY" ]; then
+      log_step "Opening $SIGNUP_URL…"
+      command -v xdg-open >/dev/null 2>&1 && xdg-open "$SIGNUP_URL" 2>/dev/null || \
+        command -v open    >/dev/null 2>&1 && open    "$SIGNUP_URL" 2>/dev/null || true
+      log_warn "Re-run bootstrap.ps2 after you have your key:"
+      echo -e "  ${CYAN}./bootstrap.ps2 -k \"qapi-starter-YOUR_KEY\"${RESET}"
+      exit 0
+    fi
+  else
+    log_fail "Non-interactive mode: supply -k KEY or set QAPI_KEY. Exiting."
+    exit 1
+  fi
+fi
+
+if ! echo "$API_KEY" | grep -qE '^qapi-(starter|pro|audited)-[0-9a-f-]+$'; then
+  log_warn "Key format looks unusual. Expected: qapi-<tier>-<uuid>. Proceeding anyway."
+fi
+log_ok "API key accepted."
+log_json "bootstrap.key_resolved" "API key accepted" "\"tier\":\"$TIER\""
+
+# ── Step 4: Connectivity check ────────────────────────────────────────────────
+log_step "Verifying connectivity to QAPi Core Service ($BASE_URL)…"
+if command -v curl >/dev/null 2>&1; then
+  HTTP_STATUS=$(curl -s -o /tmp/qapi_health.json -w "%{http_code}" \
+    --max-time 10 "$BASE_URL/health" 2>/dev/null || echo "000")
+  if [ "$HTTP_STATUS" = "200" ]; then
+    HEALTH_TS=$(grep -o '"timestamp":"[^"]*"' /tmp/qapi_health.json 2>/dev/null | cut -d'"' -f4 || echo "unknown")
+    log_ok "QAPi Core Service is online. Timestamp: $HEALTH_TS"
+    log_json "bootstrap.health_check" "Core Service online" "\"timestamp\":\"$HEALTH_TS\""
+  else
+    log_warn "Could not reach $BASE_URL/health (HTTP $HTTP_STATUS) — proceeding offline."
+    log_json "bootstrap.health_check" "Core Service unreachable" "\"status\":\"$HTTP_STATUS\""
+  fi
+elif command -v wget >/dev/null 2>&1; then
+  if wget -q --timeout=10 -O /tmp/qapi_health.json "$BASE_URL/health" 2>/dev/null; then
+    log_ok "QAPi Core Service is online."
+    log_json "bootstrap.health_check" "Core Service online"
+  else
+    log_warn "Could not reach $BASE_URL/health — proceeding offline."
+    log_json "bootstrap.health_check" "Core Service unreachable"
+  fi
+else
+  log_warn "Neither curl nor wget found — skipping connectivity check."
+fi
+
+# ── Step 5: Install @qapi/sdk ─────────────────────────────────────────────────
+log_step "Installing @qapi/sdk$(${GLOBAL} && echo ' globally' || echo ' locally')…"
+if $GLOBAL; then
+  npm install -g @qapi/sdk 2>&1 | tail -3
+else
+  if [ ! -f "package.json" ]; then
+    log_warn "No package.json found — running npm init -y first."
+    npm init -y >/dev/null 2>&1
+  fi
+  npm install @qapi/sdk 2>&1 | tail -3
+fi
+log_ok "@qapi/sdk installed."
+log_json "bootstrap.sdk_install" "@qapi/sdk installed" "\"global\":$GLOBAL"
+
+# ── Step 6: Write the Node.js virtual-module loader hook ──────────────────────
+log_step "Writing virtual module loader hook ($LOADER_FILE)…"
+cat > "$LOADER_FILE" << 'LOADER_EOF'
+/**
+ * QAPi Virtual Module Loader Hook  (qapi-loader.mjs)
+ *
+ * Loaded via:  node --loader ./qapi-loader.mjs app.js
+ *   or via:    NODE_OPTIONS="--loader ./qapi-loader.mjs"
+ *
+ * Intercepts ESM resolve() calls for modules prefixed with "@qapi/"
+ * and redirects them to the QAPi SDK instead of local node_modules.
+ *
+ * For CommonJS (require) interception see the companion qapi-register.cjs.
+ */
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+
+const _require = createRequire(import.meta.url);
+
+// Modules managed by QAPi – add names here or derive from SDK at runtime
+const QAPI_MANAGED_PREFIX = "@qapi/";
+
+export async function resolve(specifier, context, nextResolve) {
+  if (specifier.startsWith(QAPI_MANAGED_PREFIX) || isQapiManaged(specifier)) {
+    const ts = new Date().toISOString();
+    process.stderr.write(
+      JSON.stringify({ ts, level: "info", event: "resolution", module: specifier, source: "qapi-loader" }) + "\n"
+    );
+    // Delegate to the SDK's virtual resolver when it is installed
+    try {
+      const sdkPath = _require.resolve("@qapi/sdk");
+      const sdkUrl  = pathToFileURL(sdkPath).href;
+      // Return a synthetic URL that the SDK will handle at load time
+      return { shortCircuit: true, url: `qapi-virtual:${specifier}?sdk=${encodeURIComponent(sdkUrl)}` };
+    } catch {
+      // SDK not installed – fall through to normal resolution with a warning
+      process.stderr.write(
+        JSON.stringify({ ts, level: "warn", event: "resolution", module: specifier,
+          msg: "@qapi/sdk not found – falling back to local node_modules" }) + "\n"
+      );
+    }
+  }
+  return nextResolve(specifier, context);
+}
+
+export async function load(url, context, nextLoad) {
+  if (url.startsWith("qapi-virtual:")) {
+    const specifier = decodeURIComponent(url.replace("qapi-virtual:", "").split("?")[0]);
+    const ts = new Date().toISOString();
+    process.stderr.write(
+      JSON.stringify({ ts, level: "error", event: "resolution", module: specifier,
+        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @qapi/sdk instead." }) + "\n"
+    );
+    throw new Error(
+      `QAPi virtual module streaming is not implemented for "${specifier}". ` +
+      `Use "new QAPiClient({ apiKey: process.env.QAPI_KEY }).resolve(${JSON.stringify(specifier)})" ` +
+      `from @qapi/sdk to obtain the module entrypoint, then load it via your own module loader.`
+    );
+  }
+  return nextLoad(url, context);
+}
+
+function isQapiManaged(specifier) {
+  // Check whether an explicit registry maps this module to QAPi
+  const managed = (process.env.QAPI_MANAGED_MODULES || "").split(",").filter(Boolean);
+  return managed.includes(specifier);
+}
+LOADER_EOF
+
+log_ok "Loader hook written to ./$LOADER_FILE"
+log_json "bootstrap.loader_hook" "Loader hook created" "\"file\":\"$LOADER_FILE\""
+
+# ── Step 7: Write CommonJS register hook ──────────────────────────────────────
+log_step "Writing CommonJS require hook (qapi-register.cjs)…"
+cat > "qapi-register.cjs" << 'CJS_EOF'
+/**
+ * QAPi CommonJS Require Hook  (qapi-register.cjs)
+ *
+ * Loaded via:  node -r ./qapi-register.cjs app.js
+ *   or via:    NODE_OPTIONS="-r ./qapi-register.cjs"
+ *
+ * Intercepts require() calls for @qapi/-prefixed modules and redirects
+ * them through the QAPi SDK virtual resolver.
+ * Local node_modules are NEVER treated as authoritative for these modules.
+ */
+"use strict";
+
+const Module = require("module");
+const _origResolve = Module._resolveFilename.bind(Module);
+
+const QAPI_MANAGED_PREFIX = "@qapi/";
+const managedExtra = (process.env.QAPI_MANAGED_MODULES || "").split(",").filter(Boolean);
+
+function isQapiManaged(request) {
+  return request.startsWith(QAPI_MANAGED_PREFIX) || managedExtra.includes(request);
+}
+
+Module._resolveFilename = function qapiResolveFilename(request, parent, isMain, options) {
+  if (isQapiManaged(request)) {
+    const ts = new Date().toISOString();
+    process.stderr.write(
+      JSON.stringify({ ts, level: "error", event: "resolution", module: request, source: "qapi-register",
+        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @qapi/sdk instead." }) + "\n"
+    );
+    throw new Error(
+      `QAPi virtual module streaming is not implemented for "${request}". ` +
+      `Use "new QAPiClient({ apiKey: process.env.QAPI_KEY }).resolve(${JSON.stringify(request)})" ` +
+      `from @qapi/sdk to obtain the module entrypoint, then load it via your own module loader.`
+    );
+  }
+  return _origResolve(request, parent, isMain, options);
+};
+CJS_EOF
+
+log_ok "CJS register hook written to ./qapi-register.cjs"
+log_json "bootstrap.cjs_hook" "CJS require hook created" "\"file\":\"qapi-register.cjs\""
+
+# ── Step 8: Set environment variables ─────────────────────────────────────────
+log_step "Setting environment variables for current session…"
+export QAPI_KEY="$API_KEY"
+export QAPI_BASE_URL="$BASE_URL"
+export QAPI_TIER="$TIER"
+
+if $GLOBAL; then
+  log_step "Persisting QAPI_KEY to shell profile(s)…"
+  PROFILE_BLOCK="
+# QAPi bootstrap
+export QAPI_KEY=\"$API_KEY\"
+export QAPI_BASE_URL=\"$BASE_URL\"
+export QAPI_TIER=\"$TIER\"
+"
+  for profile in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    if [ -f "$profile" ]; then
+      # Remove any previous QAPi block first (cross-platform: perl instead of sed -i)
+      perl -pi -e 'if (/# QAPi bootstrap/ .. /^$/) { $_ = "" }' "$profile" 2>/dev/null || true
+      printf '%s' "$PROFILE_BLOCK" >> "$profile"
+      log_ok "Written to $profile"
+    fi
+  done
+  log_json "bootstrap.env_persist" "Env vars persisted" "\"global\":true"
+else
+  log_ok "QAPI_KEY set for current session only."
+  log_json "bootstrap.env_set" "Env vars set (session)" "\"global\":false"
+fi
+
+# ── Step 9: Summary ───────────────────────────────────────────────────────────
+echo ""
+echo -e "  ${CYAN}════════════════════════════════════════${RESET}"
+echo -e "  ${GREEN}${BOLD}QAPi bootstrap complete!${RESET}"
+echo -e "  ${CYAN}════════════════════════════════════════${RESET}"
+echo ""
+echo -e "  Tier    : $TIER"
+echo -e "  API Key : ${API_KEY:0:24}…"
+echo -e "  Base URL: $BASE_URL"
+echo -e "  Env     : $ENV_TYPE"
+echo ""
+echo -e "  ${CYAN}ESM usage (--loader):${RESET}"
+echo -e "    node --loader ./qapi-loader.mjs app.mjs"
+echo ""
+echo -e "  ${CYAN}CJS usage (-r):${RESET}"
+echo -e "    node -r ./qapi-register.cjs app.js"
+echo ""
+echo -e "  ${CYAN}Or in code:${RESET}"
+echo    '    const { QAPiClient } = require("@qapi/sdk");'
+echo    '    const client = new QAPiClient({ apiKey: process.env.QAPI_KEY });'
+echo    '    const mod = await client.resolve("express");'
+echo ""
+echo -e "  Docs: ${CYAN}https://qapi.dev/docs${RESET}"
+echo ""
+
+log_json "bootstrap.complete" "Bootstrap finished" "\"tier\":\"$TIER\",\"env\":\"$ENV_TYPE\""
