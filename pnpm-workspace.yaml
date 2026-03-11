@@ -1,4 +1,7 @@
 # pnpm-workspace.yaml
 
 packages:
+  - 'api'
+  - 'sdk'
   - 'apps/*'
+  - 'dashboard'

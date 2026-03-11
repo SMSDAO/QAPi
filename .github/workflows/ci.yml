@@ -47,6 +47,50 @@ jobs:
       - name: Run SDK tests
         run: cd sdk && npm test
 
+  test-core:
+    name: Core Brain Tests (Node 22)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npm test
+
+  typecheck:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npm run typecheck
+
+  build-sdk:
+    name: SDK Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npm run build
+      - name: Verify build artifacts
+        run: test -f dist/index.cjs && test -f dist/index.mjs && echo "Build artifacts OK"
+
   validate-schema:
     name: Validate module-node.schema.json
     runs-on: ubuntu-latest

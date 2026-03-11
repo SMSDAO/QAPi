@@ -100,6 +100,39 @@ describe("POST /auth/signup", () => {
   });
 });
 
+// ── Auth /me ─────────────────────────────────────────────────────────────
+describe("GET /auth/me", () => {
+  test("returns tier info for authenticated starter key", async () => {
+    const { status, body } = await req("GET", "/auth/me", {
+      headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.tier, "starter");
+    assert.ok(body.tierConfig);
+    assert.ok(body.createdAt);
+  });
+
+  test("returns tier info for authenticated pro key", async () => {
+    const { status, body } = await req("GET", "/auth/me", {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+    });
+    assert.equal(status, 200);
+    assert.equal(body.tier, "pro");
+  });
+
+  test("returns 401 without key", async () => {
+    const { status } = await req("GET", "/auth/me");
+    assert.equal(status, 401);
+  });
+
+  test("returns 403 with invalid key", async () => {
+    const { status } = await req("GET", "/auth/me", {
+      headers: { "X-QAPi-Key": "not-a-valid-key" },
+    });
+    assert.equal(status, 403);
+  });
+});
+
 // ── Modules – auth guard ──────────────────────────────────────────────────
 describe("GET /modules – auth", () => {
   test("returns 401 without key", async () => {

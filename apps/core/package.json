@@ -3,8 +3,13 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "engines": {"node": ">=18"},
+  "engines": {"node": ">=22"},
   "scripts": {
-    "test": "node --import ./tests/ts-loader.js --test tests/*.test.ts"
+    "test": "node --experimental-strip-types --import ./tests/ts-loader.js --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3"
   }
 }
