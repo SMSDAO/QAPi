@@ -1,7 +1,7 @@
 import { parseBearerToken, tierFromToken, redactToken, type Tier } from "../lib/tier-manager.js";
+import { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } from "../lib/module-resolver.js";
 
 const ALLOWED_ORIGINS = new Set(["https://qapi.github.io", "http://localhost:3000"]);
-const SHA40_RE = /^[0-9a-f]{40}$/i;
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -26,38 +26,6 @@ function jsHeaders(extra: Record<string, string> = {}) {
 
 function auditLog(entry: Record<string, unknown>) {
   console.log(JSON.stringify(entry));
-}
-
-function parseGhModuleId(id: string) {
-  const m = id.match(/^gh:([^\/\s]+)\/([^@\s]+)@([^:\s]+):(.+)$/);
-  if (!m) return null;
-
-  const [, owner, repo, ref, filePath] = m;
-
-  if (!SHA40_RE.test(ref)) return null;
-  if (!filePath || filePath.includes("..") || filePath.startsWith("/") || filePath.includes("\\")) return null;
-
-  return { owner, repo, sha: ref, filePath };
-}
-
-function parseBlobModuleId(id: string) {
-  const m = id.match(/^blob:(.+)$/);
-  if (!m) return null;
-
-  const path = m[1].trim();
-  if (!path || path.includes("..") || path.startsWith("/") || path.includes("\\")) return null;
-
-  return { path };
-}
-
-function ghRawUrl(owner: string, repo: string, sha: string, filePath: string) {
-  return `https://raw.githubusercontent.com/${owner}/${repo}/${sha}/${filePath}`;
-}
-
-function blobUrl(path: string) {
-  const base = (process.env.QAPI_BLOB_BASE_URL || "").replace(/\/$/, "");
-  if (!base) return null;
-  return `${base}/${encodeURI(path)}`;
 }
 
 export default async function handler(req: Request): Promise<Response> {

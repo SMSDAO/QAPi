@@ -1,0 +1,13 @@
+{
+  "name": "@qapi/dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "QAPi Dashboard – static HTML frontend",
+  "scripts": {
+    "dev": "node dev-server.js",
+    "start": "node dev-server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

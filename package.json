@@ -1,0 +1,26 @@
+{
+  "name": "qapi",
+  "private": true,
+  "version": "1.0.0",
+  "description": "QAPi – Virtual Module Resolution Platform",
+  "scripts": {
+    "bootstrap": "node scripts/bootstrap.js",
+    "predev": "npm --prefix apps/core run build",
+    "dev": "concurrently -n api,dashboard -c cyan,magenta \"npm --prefix api run dev\" \"npm --prefix dashboard run dev\"",
+    "start": "npm --prefix api run start",
+    "test": "npm --prefix api run test && npm --prefix sdk run test && npm --prefix apps/core run test",
+    "test:api": "npm --prefix api run test",
+    "test:sdk": "npm --prefix sdk run test",
+    "test:core": "npm --prefix apps/core run test",
+    "build:core": "npm --prefix apps/core run build",
+    "build:sdk": "npm --prefix sdk run build",
+    "build": "npm run build:core && npm run build:sdk && npm --prefix apps/core run typecheck",
+    "typecheck": "npm --prefix apps/core run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

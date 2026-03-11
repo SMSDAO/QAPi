@@ -11,6 +11,7 @@ const modulesRouter = require("./routes/modules");
 const authRouter = require("./routes/auth");
 const auditRouter = require("./routes/audit");
 const metricsRouter = require("./routes/metrics");
+const v1Router = require("./routes/v1");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,9 @@ app.use("/auth", authRouter);
 
 // ── Public metrics (no auth – for Vercel dashboard polling) ──────────────────
 app.use("/metrics", metricsRouter);
+
+// ── Versioned v1 API (mix of public tier endpoints + protected module endpoints)
+app.use("/v1", v1Router);
 
 // ── Protected routes – require a valid API key ────────────────────────────────
 app.use("/modules", apiKeyMiddleware, rateLimitMiddleware, modulesRouter);

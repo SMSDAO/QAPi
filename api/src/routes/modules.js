@@ -4,6 +4,10 @@
 const express = require("express");
 const { requireTier } = require("../middleware/auth");
 const { listNodes, getNode, findNodeByName, upsertNode } = require("../data/moduleStore");
+const { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } = require("@qapi/core-brain/lib/module-resolver");
+const { redactToken } = require("@qapi/core-brain/lib/tier-manager");
+
+const TIER_ORDER = ["starter", "pro", "audited"];
 
 const router = express.Router();
 
@@ -66,6 +70,109 @@ router.get("/resolve", (req, res) => {
     audit: { score: node.audit.score, passed: node.audit.passed, zeroDay: node.audit.zeroDay },
     cachedTtlSeconds: node.cache.ttlSeconds,
   });
+});
+
+/**
+ * GET /modules/stream?module=<module-id>
+ * Streams raw module source code from the upstream origin.
+ *
+ * Uses the same parsing logic as the Vercel resolver (apps/core/api/resolve.ts)
+ * so behaviour is identical whether running locally or deployed on Vercel.
+ *
+ * Module ID formats:
+ *   gh:OWNER/REPO@<40-hex-sha>:FILEPATH   – public GitHub (any tier)
+ *   blob:FILEPATH                          – private VPS (Pro+ only)
+ *
+ * The audited tier additionally emits a structured audit log entry.
+ */
+router.get("/stream", async (req, res, next) => {
+  const moduleId = (req.query.module || "").trim();
+  if (!moduleId) {
+    return res.status(400).json({ error: "Query param `module` is required.", code: "STREAM_MISSING_MODULE" });
+  }
+
+  const gh = parseGhModuleId(moduleId);
+  const bl = parseBlobModuleId(moduleId);
+
+  if (!gh && !bl) {
+    return res.status(400).json({
+      error: "Invalid module id. Use gh:OWNER/REPO@<40-hex-sha>:FILEPATH or blob:FILEPATH",
+      code: "STREAM_INVALID_MODULE_ID",
+    });
+  }
+
+  // blob: modules require Pro tier or higher
+  if (bl && TIER_ORDER.indexOf(req.qapiTier) < TIER_ORDER.indexOf("pro")) {
+    return res.status(403).json({
+      error: "blob: module IDs require the 'pro' tier or higher.",
+      code: "STREAM_TIER_INSUFFICIENT",
+      requiredTier: "pro",
+      currentTier: req.qapiTier,
+    });
+  }
+
+  const upstream = gh
+    ? ghRawUrl(gh.owner, gh.repo, gh.sha, gh.filePath)
+    : blobUrl(bl.path);
+
+  if (!upstream) {
+    return res.status(503).json({
+      error: "Blob storage is not configured (QAPI_BLOB_BASE_URL is not set).",
+      code: "STREAM_BLOB_NOT_CONFIGURED",
+    });
+  }
+
+  const started = Date.now();
+
+  try {
+    const ifNoneMatch = req.headers["if-none-match"];
+    const upstreamRes = await fetch(upstream, {
+      headers: { ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}) },
+    });
+
+    const etag = upstreamRes.headers.get("etag") || "";
+
+    if (upstreamRes.status === 304) {
+      if (etag) res.setHeader("ETag", etag);
+      return res.status(304).end();
+    }
+
+    if (!upstreamRes.ok) {
+      return res.status(502).json({
+        error: `Upstream error (${upstreamRes.status})`,
+        code: "STREAM_UPSTREAM_ERROR",
+      });
+    }
+
+    if (etag) res.setHeader("ETag", etag);
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.setHeader("Vary", "X-QAPi-Key, Authorization");
+
+    // Audited tier: emit a structured audit log entry.
+    // We must buffer the body to know its byte size for the log entry.
+    // For other tiers, pipe directly to avoid buffering large files.
+    if (req.qapiTier === "audited") {
+      const body = await upstreamRes.text();
+      console.log(JSON.stringify({
+        ts: new Date().toISOString(),
+        event: "stream-audit",
+        tier: req.qapiTier,
+        token: redactToken(req.qapiRawKey || ""),
+        module: moduleId,
+        upstream,
+        status: 200,
+        bytes: body.length,
+        latencyMs: Date.now() - started,
+      }));
+      res.send(body);
+    } else {
+      const { Readable } = require("node:stream");
+      Readable.fromWeb(upstreamRes.body).pipe(res);
+    }
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**

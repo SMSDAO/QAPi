@@ -3,6 +3,7 @@
 
 const express = require("express");
 const { createKey, TIERS } = require("../data/keyStore");
+const { apiKeyMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -13,6 +14,22 @@ const router = express.Router();
 router.get("/tiers", (_req, res) => {
   res.json({
     tiers: Object.entries(TIERS).map(([name, cfg]) => ({ name, ...cfg })),
+  });
+});
+
+/**
+ * GET /auth/me
+ * Returns the tier and metadata for the authenticated API key.
+ * Requires a valid API key via X-QAPi-Key header or Authorization: Bearer.
+ */
+router.get("/me", apiKeyMiddleware, (req, res) => {
+  const { id, tier, email, createdAt } = req.qapiKey;
+  res.json({
+    id,
+    tier,
+    email,
+    createdAt,
+    tierConfig: TIERS[tier],
   });
 });
 

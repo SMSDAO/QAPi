@@ -3,6 +3,11 @@ node_modules/
 npm-debug.log*
 *.log
 
+# Build artifacts
+dist/
+*.cjs.map
+*.mjs.map
+
 # Environment secrets
 .env
 .env.*
