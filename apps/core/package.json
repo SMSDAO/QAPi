@@ -12,6 +12,10 @@
     "./lib/module-resolver": {
       "require": "./dist/module-resolver.cjs",
       "import": "./dist/module-resolver.mjs"
+    },
+    "./lib/subscription-tiers": {
+      "require": "./dist/subscription-tiers.cjs",
+      "import": "./dist/subscription-tiers.mjs"
     }
   },
   "scripts": {

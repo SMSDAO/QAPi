@@ -24,6 +24,7 @@ mkdirSync(outdir, { recursive: true });
 const LIB_ENTRIES = [
   "lib/tier-manager.ts",
   "lib/module-resolver.ts",
+  "lib/subscription-tiers.ts",
 ];
 
 for (const entry of LIB_ENTRIES) {
@@ -51,4 +52,4 @@ for (const entry of LIB_ENTRIES) {
   });
 }
 
-console.log("[core-brain] Build complete → dist/tier-manager.{cjs,mjs}  dist/module-resolver.{cjs,mjs}");
+console.log("[core-brain] Build complete → dist/tier-manager.{cjs,mjs}  dist/module-resolver.{cjs,mjs}  dist/subscription-tiers.{cjs,mjs}");
