@@ -93,7 +93,7 @@ QAPi/
 Sign up at [qapi.dev/signup](https://qapi.dev/signup) or use the API:
 
 ```bash
-curl -X POST https://api.qapi.dev/auth/signup \
+curl -X POST https://qapi-omega.vercel.app/auth/signup \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","tier":"starter"}'
 ```

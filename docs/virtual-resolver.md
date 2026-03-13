@@ -133,7 +133,7 @@ The API logs are:
 | Variable | Description | Default |
 |---|---|---|
 | `QAPI_KEY` | Your QAPi API key | — |
-| `QAPI_BASE_URL` | Core Service URL | `https://api.qapi.dev` |
+| `QAPI_BASE_URL` | Core Service URL | `https://qapi-omega.vercel.app` |
 | `QAPI_TIER` | Your subscription tier | `starter` |
 | `QAPI_MANAGED_MODULES` | Comma-separated list of extra module names to intercept | — |
 

@@ -122,7 +122,7 @@ Every module tracked by QAPi is described by a **Module Node** JSON record. The 
 **Requires Pro tier or higher.**
 
 ```bash
-curl -X POST https://api.qapi.dev/modules \
+curl -X POST https://qapi-omega.vercel.app/modules \
   -H "X-QAPi-Key: qapi-pro-YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{

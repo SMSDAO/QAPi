@@ -17,7 +17,7 @@ const { QAPiClient, QAPiError, signup } = require("@qapi/sdk");
 
 const client = new QAPiClient({
   apiKey:  process.env.QAPI_KEY,            // required
-  baseUrl: "https://api.qapi.dev",          // optional – defaults to this
+  baseUrl: "https://qapi-omega.vercel.app",     // optional – defaults to this
   timeout: 10_000,                          // optional – ms, default 10 000
 });
 ```

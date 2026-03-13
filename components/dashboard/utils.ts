@@ -47,8 +47,8 @@ export function timeAgo(date: Date | string): string {
   return `${diffDay}d ago`;
 }
 
-/** Returns the CSS colour class for a given status. */
-export function statusColor(status: "ok" | "warn" | "error" | string): string {
+/** Returns the CSS class for a given status string. */
+export function statusClass(status: "ok" | "warn" | "error" | string): string {
   switch (status) {
     case "ok": return "text-green-500";
     case "warn": return "text-yellow-500";

@@ -113,7 +113,7 @@
 
         <h3 class="text-neon-purple font-bold mt-6 mb-2">1. Get an API key</h3>
         <p class="text-gray-400 mb-3">Sign up at <a href="signup.html" class="text-neon-cyan hover:underline">qapi.dev/signup</a> or call the API directly:</p>
-        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>curl -X POST https://api.qapi.dev/auth/signup \
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>curl -X POST https://qapi-omega.vercel.app/auth/signup \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","tier":"starter"}'</code></pre>
 
@@ -157,7 +157,7 @@ yarn add @qapi/sdk</code></pre>
 
 const client = new QAPiClient({
   apiKey:  'qapi-starter-YOUR_KEY',   // required
-  baseUrl: 'https://api.qapi.dev',    // optional, default shown
+  baseUrl: 'https://qapi-omega.vercel.app', // optional, default shown
   timeout: 10_000,                    // optional, ms
 });</code></pre>
       </section>

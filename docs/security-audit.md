@@ -133,15 +133,15 @@ const report = await auditedClient.auditReport();
 ```bash
 # Scan a specific module
 curl -H "X-QAPi-Key: qapi-audited-YOUR_KEY" \
-  "https://api.qapi.dev/audit/scan?name=express"
+  "https://qapi-omega.vercel.app/audit/scan?name=express"
 
 # Full report
 curl -H "X-QAPi-Key: qapi-audited-YOUR_KEY" \
-  "https://api.qapi.dev/audit/report"
+  "https://qapi-omega.vercel.app/audit/report"
 
 # Single node audit
 curl -H "X-QAPi-Key: qapi-audited-YOUR_KEY" \
-  "https://api.qapi.dev/audit/<node-uuid>"
+  "https://qapi-omega.vercel.app/audit/<node-uuid>"
 ```
 
 ---

@@ -17,7 +17,7 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { formatLatency, formatPercent, formatNumber, timeAgo, statusColor } from "./utils.js";
+import { formatLatency, formatPercent, formatNumber, timeAgo, statusClass } from "./utils.js";
 import { SubscriptionTier } from "../../apps/core/lib/subscription-tiers.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ function MetricCard({
   return (
     <div className="rounded-xl border border-gray-700 bg-gray-800 p-4">
       <p className="text-xs font-medium uppercase tracking-wider text-gray-400">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${status ? statusColor(status) : "text-white"}`}>
+      <p className={`mt-1 text-2xl font-bold ${status ? statusClass(status) : "text-white"}`}>
         {value}
       </p>
       {sub && <p className="mt-0.5 text-xs text-gray-500">{sub}</p>}
@@ -261,25 +261,28 @@ export function RichDashboard({ viewerTier, wsUrl, pollIntervalMs = 5000 }: Dash
 
 // ── Lazy-loaded Recharts sparkline ────────────────────────────────────────────
 
+/** Subset of the Recharts module used by LatencyChart. */
+type RechartsComponents = {
+  ResponsiveContainer: React.ComponentType<{ width: string | number; height: number; children: React.ReactNode }>;
+  LineChart: React.ComponentType<{ data: unknown[]; children: React.ReactNode }>;
+  Line: React.ComponentType<{ type: string; dataKey: string; stroke: string; dot: boolean; name: string }>;
+  XAxis: React.ComponentType<{ dataKey: string; hide: boolean }>;
+  YAxis: React.ComponentType<{ hide: boolean }>;
+  Tooltip: React.ComponentType<{ formatter: (v: number) => string }>;
+  Legend: React.ComponentType<Record<string, unknown>>;
+};
+
 /**
  * LatencyChart renders a responsive latency sparkline using Recharts.
  * Uses React.lazy / dynamic import so Recharts is not in the initial bundle.
  */
 function LatencyChart({ metrics }: { metrics: MetricSnapshot[] }) {
-  const [Recharts, setRecharts] = useState<{
-    ResponsiveContainer: React.ComponentType<{ width: string | number; height: number; children: React.ReactNode }>;
-    LineChart: React.ComponentType<{ data: unknown[]; children: React.ReactNode }>;
-    Line: React.ComponentType<{ type: string; dataKey: string; stroke: string; dot: boolean; name: string }>;
-    XAxis: React.ComponentType<{ dataKey: string; hide: boolean }>;
-    YAxis: React.ComponentType<{ hide: boolean }>;
-    Tooltip: React.ComponentType<{ formatter: (v: number) => string }>;
-    Legend: React.ComponentType<Record<string, unknown>>;
-  } | null>(null);
+  const [Recharts, setRecharts] = useState<RechartsComponents | null>(null);
 
   useEffect(() => {
     // Dynamic import – Recharts is a peer dependency
     import("recharts")
-      .then((mod) => setRecharts(mod as typeof Recharts))
+      .then((mod) => setRecharts(mod as RechartsComponents))
       .catch(() => { /* Recharts not installed – skip chart */ });
   }, []);
 
