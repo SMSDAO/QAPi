@@ -1,6 +1,6 @@
 # API Reference
 
-Base URL: `https://api.qapi.dev`
+Base URL: `https://qapi-omega.vercel.app`
 
 All protected endpoints require an API key supplied as:
 - Header: `X-QAPi-Key: qapi-<tier>-<uuid>`

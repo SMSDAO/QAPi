@@ -6,7 +6,7 @@
  *
  * Usage:
  *   const { QAPiClient } = require("@qapi/sdk");
- *   const client = new QAPiClient({ apiKey: "qapi-starter-...", baseUrl: "https://api.qapi.dev" });
+ *   const client = new QAPiClient({ apiKey: "qapi-starter-...", baseUrl: "https://qapi-omega.vercel.app" });
  *   const info = await client.resolve("express");
  */
 "use strict";
@@ -64,7 +64,7 @@ class QAPiClient {
   /**
    * @param {{ apiKey: string, baseUrl?: string, timeout?: number }} options
    */
-  constructor({ apiKey, baseUrl = "https://api.qapi.dev", timeout = 10_000 } = {}) {
+  constructor({ apiKey, baseUrl = "https://qapi-omega.vercel.app", timeout = 10_000 } = {}) {
     if (!apiKey) throw new Error("[QAPi SDK] apiKey is required.");
     this._apiKey = apiKey;
     this._baseUrl = baseUrl.replace(/\/$/, "");
@@ -210,7 +210,7 @@ class QAPiError extends Error {
  * @param {{ email: string, tier?: "starter"|"pro"|"audited", baseUrl?: string }} opts
  * @returns {Promise<{ apiKey, tier, email, tierConfig }>}
  */
-async function signup({ email, tier = "starter", baseUrl = "https://api.qapi.dev" } = {}) {
+async function signup({ email, tier = "starter", baseUrl = "https://qapi-omega.vercel.app" } = {}) {
   const { status, body } = await _request(`${baseUrl.replace(/\/$/, "")}/auth/signup`, {
     method: "POST",
     body: { email, tier },

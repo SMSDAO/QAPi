@@ -17,5 +17,5 @@ Welcome to the QAPi documentation. QAPi is a **Streaming Service for Code** — 
 ---
 
 > **Live dashboard:** [qapi.dev](https://qapi.dev)  
-> **API base URL:** `https://api.qapi.dev`  
+> **API base URL:** `https://qapi-omega.vercel.app`  
 > **Source code:** [github.com/SMSDAO/QAPi](https://github.com/SMSDAO/QAPi)

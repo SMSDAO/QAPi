@@ -89,7 +89,7 @@ The API should be deployed separately to a VPS (DigitalOcean / AWS / OVH) or a V
 
 ## Configuring the Dashboard API URL
 
-By default the dashboard polls `https://api.qapi.dev/metrics`. To point the dashboard at a self-hosted API, change the `BASE_API_URL` constant in the inline `<script>` at the bottom of `dashboard/index.html`:
+By default the dashboard polls `https://qapi-omega.vercel.app/metrics`. To point the dashboard at a self-hosted API, change the `BASE_API_URL` constant in the inline `<script>` at the bottom of `dashboard/index.html`:
 
 ```js
 const BASE_API_URL = "https://your-vps.example.com";
