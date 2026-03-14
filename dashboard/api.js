@@ -16,8 +16,9 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "qapi_api_key";
-  const TIMEOUT_MS  = 8_000;
+  const STORAGE_KEY       = "qapi_api_key";
+  const STORAGE_EMAIL_KEY = "qapi_email";
+  const TIMEOUT_MS        = 8_000;
 
   // ── Base URL detection ──────────────────────────────────────────────────────
   // • file:// or localhost → relative URLs (dev-server proxies them to :3000)
@@ -59,6 +60,16 @@
 
   function clearKey() {
     try { localStorage.removeItem(STORAGE_KEY); }
+    catch { /* ignore */ }
+  }
+
+  function getStoredEmail() {
+    try { return localStorage.getItem(STORAGE_EMAIL_KEY) || null; }
+    catch { return null; }
+  }
+
+  function storeEmail(email) {
+    try { localStorage.setItem(STORAGE_EMAIL_KEY, email); }
     catch { /* ignore */ }
   }
 
@@ -139,6 +150,8 @@
   /**
    * Fetch the authenticated caller's profile.
    * Returns null if the key is invalid or not provided.
+   * When the server doesn't return an email (stateless serverless deployment),
+   * falls back to the locally-stored email from the most recent signup.
    * @param {string} apiKey
    */
   async function getMe(apiKey) {
@@ -148,7 +161,12 @@
         headers: { "X-QAPi-Key": apiKey },
       });
       if (!res.ok) return null;
-      return res.json();
+      const data = await res.json();
+      // Supplement with locally-stored email when the server omits it
+      if (!data.email) {
+        data.email = getStoredEmail() || "";
+      }
+      return data;
     } catch {
       return null;
     }
@@ -178,6 +196,9 @@
     getStoredKey,
     storeKey,
     clearKey,
+    // email persistence (supplements stateless /auth/me in production)
+    getStoredEmail,
+    storeEmail,
     // API calls
     fetchMetrics,
     fetchTier,
