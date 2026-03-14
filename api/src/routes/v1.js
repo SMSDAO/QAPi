@@ -10,8 +10,8 @@ const { TIERS, findKey } = require("../data/keyStore");
 const { listNodes, findNodeBySha } = require("../data/moduleStore");
 const { apiKeyMiddleware } = require("../middleware/auth");
 const { rateLimitMiddleware } = require("../middleware/rateLimit");
-const { parseGhModuleId, ghRawUrl } = require("@qapi/core-brain/lib/module-resolver");
-const { parseBearerToken } = require("@qapi/core-brain/lib/tier-manager");
+const { parseGhModuleId, ghRawUrl } = require("@solanar/core-brain/lib/module-resolver");
+const { parseBearerToken } = require("@solanar/core-brain/lib/tier-manager");
 
 const router = express.Router();
 

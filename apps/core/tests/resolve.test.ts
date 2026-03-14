@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 const VALID_SHA = "a".repeat(40);
-const ALLOWED_ORIGIN = "https://qapi.github.io";
+const ALLOWED_ORIGIN = "https://qapi-omega.vercel.app";
 const LOCALHOST_ORIGIN = "http://localhost:3000";
 const FOREIGN_ORIGIN = "https://evil.example.com";
 
@@ -301,7 +301,7 @@ describe("Blob module", () => {
 
 // ── CORS headers ──────────────────────────────────────────────────────────
 describe("CORS headers", () => {
-  test("allowed origin (qapi.github.io) is echoed back", async () => {
+  test("allowed origin (qapi-omega.vercel.app) is echoed back", async () => {
     (globalThis as Record<string, unknown>).fetch = mockFetch200();
     const moduleId = `gh:foo/bar@${VALID_SHA}:a.js`;
     const req = makeRequest(
@@ -323,7 +323,7 @@ describe("CORS headers", () => {
     assert.equal(res.headers.get("Access-Control-Allow-Origin"), LOCALHOST_ORIGIN);
   });
 
-  test("unknown origin falls back to qapi.github.io", async () => {
+  test("unknown origin falls back to qapi-omega.vercel.app", async () => {
     (globalThis as Record<string, unknown>).fetch = mockFetch200();
     const moduleId = `gh:foo/bar@${VALID_SHA}:a.js`;
     const req = makeRequest(

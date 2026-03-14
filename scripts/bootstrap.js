@@ -44,10 +44,10 @@ function checkNodeVersion() {
 // ── Workspace packages to install ────────────────────────────────────────────
 
 const PACKAGES = [
-  { name: "@qapi/core",         dir: "api" },
-  { name: "@qapi/sdk",          dir: "sdk" },
-  { name: "@qapi/core-brain",   dir: "apps/core" },
-  { name: "@qapi/dashboard",    dir: "dashboard" },
+  { name: "@solanar/core",         dir: "api" },
+  { name: "@solanar/sdk",          dir: "sdk" },
+  { name: "@solanar/core-brain",   dir: "apps/core" },
+  { name: "@solanar/dashboard",    dir: "dashboard" },
 ];
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -88,14 +88,14 @@ if (failed > 0) {
 }
 
 // Build apps/core so its CJS dist/ is available before the API starts.
-// (api/package.json has @qapi/core-brain as a file dep; the dist files must
+// (api/package.json has @solanar/core-brain as a file dep; the dist files must
 // exist before the API server or its tests can require() them.)
 try {
-  log("info", "Building @qapi/core-brain (libs → dist/)…");
+  log("info", "Building @solanar/core-brain (libs → dist/)…");
   run("npm run build", path.join(ROOT, "apps/core"));
-  log("ok", "@qapi/core-brain built ✓");
+  log("ok", "@solanar/core-brain built ✓");
 } catch (err) {
-  log("error", `Failed to build @qapi/core-brain: ${err.message}`);
+  log("error", `Failed to build @solanar/core-brain: ${err.message}`);
   process.exit(1);
 }
 

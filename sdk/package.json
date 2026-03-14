@@ -1,5 +1,5 @@
 {
-  "name": "@qapi/sdk",
+  "name": "@solanar/sdk",
   "version": "1.0.0",
   "description": "QAPi SDK – lightweight virtual module resolver client",
   "main": "src/index.js",

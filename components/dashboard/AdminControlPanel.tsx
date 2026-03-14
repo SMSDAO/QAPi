@@ -301,7 +301,7 @@ export function AdminControlPanel({ viewerTier }: AdminControlPanelProps) {
         <p className="text-2xl mb-2">🔒</p>
         <p className="font-medium text-gray-200">Admin Panel requires the Audited tier</p>
         <p className="mt-1 text-xs text-gray-500">
-          Contact <a href="mailto:sales@qapi.dev" className="text-indigo-400 underline">sales@qapi.dev</a> to upgrade.
+          Contact <a href="mailto:sales@qapi-omega.vercel.app" className="text-indigo-400 underline">sales@qapi-omega.vercel.app</a> to upgrade.
         </p>
       </div>
     );

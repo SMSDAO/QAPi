@@ -11,7 +11,7 @@
 #
 #    What it does:
 #      1. Validates that Node.js >= 18 and npm are installed.
-#      2. Installs the @qapi/sdk package (globally or locally).
+#      2. Installs the @solanar/sdk package (globally or locally).
 #      3. Writes Node.js loader hooks (qapi-loader.mjs, qapi-register.cjs)
 #         that intercept module resolution for QAPi-managed imports.
 #      4. Exports QAPI_KEY, QAPI_BASE_URL, and QAPI_TIER for the current
@@ -25,7 +25,7 @@
 #    -t TIER     Subscription tier: starter | pro | audited.
 #                Defaults to 'starter'.
 #    -u URL      QAPi Core Service base URL.
-#                Defaults to 'https://api.qapi.dev'.
+#                Defaults to 'https://qapi-omega.vercel.app'.
 #    -g          Install the SDK globally and persist environment variables
 #                to the shell profile.
 #    -r          Remove QAPi environment variables, the loader hook, and
@@ -56,7 +56,7 @@ set -euo pipefail
 # ── Defaults ──────────────────────────────────────────────────────────────────
 QAPI_KEY_ARG=""
 TIER="starter"
-BASE_URL="https://api.qapi.dev"
+BASE_URL="https://qapi-omega.vercel.app"
 GLOBAL=false
 UNINSTALL=false
 LOADER_FILE="qapi-loader.mjs"
@@ -117,8 +117,8 @@ if $UNINSTALL; then
   [ -f "qapi-register.cjs" ] && rm -f "qapi-register.cjs"
   [ -f ".npmrc" ] && perl -pi -e '$_ = "" if /qapi/i' ".npmrc" 2>/dev/null || true
 
-  log_step "Uninstalling global @qapi/sdk (if present)…"
-  command -v npm >/dev/null 2>&1 && npm uninstall -g @qapi/sdk 2>/dev/null || true
+  log_step "Uninstalling global @solanar/sdk (if present)…"
+  command -v npm >/dev/null 2>&1 && npm uninstall -g @solanar/sdk 2>/dev/null || true
 
   log_ok "QAPi removed."
   log_json "bootstrap.uninstall" "QAPi removed from machine"
@@ -163,7 +163,7 @@ API_KEY="${QAPI_KEY_ARG:-${QAPI_KEY:-}}"
 
 if [ -z "$API_KEY" ]; then
   log_warn "No API key found in -k option or QAPI_KEY environment variable."
-  SIGNUP_URL="https://qapi.dev/signup"
+  SIGNUP_URL="https://qapi-omega.vercel.app/signup"
   echo -e "  ${YELLOW}→ Get a free Starter key at: $SIGNUP_URL${RESET}"
 
   if [ -t 0 ]; then
@@ -214,19 +214,19 @@ else
   log_warn "Neither curl nor wget found — skipping connectivity check."
 fi
 
-# ── Step 5: Install @qapi/sdk ─────────────────────────────────────────────────
-log_step "Installing @qapi/sdk$(${GLOBAL} && echo ' globally' || echo ' locally')…"
+# ── Step 5: Install @solanar/sdk ─────────────────────────────────────────────────
+log_step "Installing @solanar/sdk$(${GLOBAL} && echo ' globally' || echo ' locally')…"
 if $GLOBAL; then
-  npm install -g @qapi/sdk 2>&1 | tail -3
+  npm install -g @solanar/sdk 2>&1 | tail -3
 else
   if [ ! -f "package.json" ]; then
     log_warn "No package.json found — running npm init -y first."
     npm init -y >/dev/null 2>&1
   fi
-  npm install @qapi/sdk 2>&1 | tail -3
+  npm install @solanar/sdk 2>&1 | tail -3
 fi
-log_ok "@qapi/sdk installed."
-log_json "bootstrap.sdk_install" "@qapi/sdk installed" "\"global\":$GLOBAL"
+log_ok "@solanar/sdk installed."
+log_json "bootstrap.sdk_install" "@solanar/sdk installed" "\"global\":$GLOBAL"
 
 # ── Step 6: Write the Node.js virtual-module loader hook ──────────────────────
 log_step "Writing virtual module loader hook ($LOADER_FILE)…"
@@ -237,7 +237,7 @@ cat > "$LOADER_FILE" << 'LOADER_EOF'
  * Loaded via:  node --loader ./qapi-loader.mjs app.js
  *   or via:    NODE_OPTIONS="--loader ./qapi-loader.mjs"
  *
- * Intercepts ESM resolve() calls for modules prefixed with "@qapi/"
+ * Intercepts ESM resolve() calls for modules prefixed with "@solanar/"
  * and redirects them to the QAPi SDK instead of local node_modules.
  *
  * For CommonJS (require) interception see the companion qapi-register.cjs.
@@ -248,7 +248,7 @@ import { pathToFileURL } from "node:url";
 const _require = createRequire(import.meta.url);
 
 // Modules managed by QAPi – add names here or derive from SDK at runtime
-const QAPI_MANAGED_PREFIX = "@qapi/";
+const QAPI_MANAGED_PREFIX = "@solanar/";
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier.startsWith(QAPI_MANAGED_PREFIX) || isQapiManaged(specifier)) {
@@ -258,7 +258,7 @@ export async function resolve(specifier, context, nextResolve) {
     );
     // Delegate to the SDK's virtual resolver when it is installed
     try {
-      const sdkPath = _require.resolve("@qapi/sdk");
+      const sdkPath = _require.resolve("@solanar/sdk");
       const sdkUrl  = pathToFileURL(sdkPath).href;
       // Return a synthetic URL that the SDK will handle at load time
       return { shortCircuit: true, url: `qapi-virtual:${specifier}?sdk=${encodeURIComponent(sdkUrl)}` };
@@ -266,7 +266,7 @@ export async function resolve(specifier, context, nextResolve) {
       // SDK not installed – fall through to normal resolution with a warning
       process.stderr.write(
         JSON.stringify({ ts, level: "warn", event: "resolution", module: specifier,
-          msg: "@qapi/sdk not found – falling back to local node_modules" }) + "\n"
+          msg: "@solanar/sdk not found – falling back to local node_modules" }) + "\n"
       );
     }
   }
@@ -279,12 +279,12 @@ export async function load(url, context, nextLoad) {
     const ts = new Date().toISOString();
     process.stderr.write(
       JSON.stringify({ ts, level: "error", event: "resolution", module: specifier,
-        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @qapi/sdk instead." }) + "\n"
+        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @solanar/sdk instead." }) + "\n"
     );
     throw new Error(
       `QAPi virtual module streaming is not implemented for "${specifier}". ` +
       `Use "new QAPiClient({ apiKey: process.env.QAPI_KEY }).resolve(${JSON.stringify(specifier)})" ` +
-      `from @qapi/sdk to obtain the module entrypoint, then load it via your own module loader.`
+      `from @solanar/sdk to obtain the module entrypoint, then load it via your own module loader.`
     );
   }
   return nextLoad(url, context);
@@ -309,7 +309,7 @@ cat > "qapi-register.cjs" << 'CJS_EOF'
  * Loaded via:  node -r ./qapi-register.cjs app.js
  *   or via:    NODE_OPTIONS="-r ./qapi-register.cjs"
  *
- * Intercepts require() calls for @qapi/-prefixed modules and redirects
+ * Intercepts require() calls for @solanar/-prefixed modules and redirects
  * them through the QAPi SDK virtual resolver.
  * Local node_modules are NEVER treated as authoritative for these modules.
  */
@@ -318,7 +318,7 @@ cat > "qapi-register.cjs" << 'CJS_EOF'
 const Module = require("module");
 const _origResolve = Module._resolveFilename.bind(Module);
 
-const QAPI_MANAGED_PREFIX = "@qapi/";
+const QAPI_MANAGED_PREFIX = "@solanar/";
 const managedExtra = (process.env.QAPI_MANAGED_MODULES || "").split(",").filter(Boolean);
 
 function isQapiManaged(request) {
@@ -330,12 +330,12 @@ Module._resolveFilename = function qapiResolveFilename(request, parent, isMain, 
     const ts = new Date().toISOString();
     process.stderr.write(
       JSON.stringify({ ts, level: "error", event: "resolution", module: request, source: "qapi-register",
-        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @qapi/sdk instead." }) + "\n"
+        msg: "QAPi virtual module streaming is not yet implemented. Use new QAPiClient({ apiKey }).resolve() from @solanar/sdk instead." }) + "\n"
     );
     throw new Error(
       `QAPi virtual module streaming is not implemented for "${request}". ` +
       `Use "new QAPiClient({ apiKey: process.env.QAPI_KEY }).resolve(${JSON.stringify(request)})" ` +
-      `from @qapi/sdk to obtain the module entrypoint, then load it via your own module loader.`
+      `from @solanar/sdk to obtain the module entrypoint, then load it via your own module loader.`
     );
   }
   return _origResolve(request, parent, isMain, options);
@@ -391,11 +391,11 @@ echo -e "  ${CYAN}CJS usage (-r):${RESET}"
 echo -e "    node -r ./qapi-register.cjs app.js"
 echo ""
 echo -e "  ${CYAN}Or in code:${RESET}"
-echo    '    const { QAPiClient } = require("@qapi/sdk");'
+echo    '    const { QAPiClient } = require("@solanar/sdk");'
 echo    '    const client = new QAPiClient({ apiKey: process.env.QAPI_KEY });'
 echo    '    const mod = await client.resolve("express");'
 echo ""
-echo -e "  Docs: ${CYAN}https://qapi.dev/docs${RESET}"
+echo -e "  Docs: ${CYAN}https://qapi-omega.vercel.app/docs${RESET}"
 echo ""
 
 log_json "bootstrap.complete" "Bootstrap finished" "\"tier\":\"$TIER\",\"env\":\"$ENV_TYPE\""

@@ -12,7 +12,7 @@
        through the QAPi SDK register hook.
     3. Sets the QAPI_KEY environment variable (session scope or persisted
        to user profile).
-    4. Installs the @qapi/sdk package globally (or locally in the current
+    4. Installs the @solanar/sdk package globally (or locally in the current
        project).
     5. Verifies connectivity to the QAPi Core Service.
 
@@ -24,7 +24,7 @@
   Subscription tier: starter | pro | audited.  Defaults to 'starter'.
 
 .PARAMETER BaseUrl
-  QAPi Core Service base URL.  Defaults to 'https://api.qapi.dev'.
+  QAPi Core Service base URL.  Defaults to 'https://qapi-omega.vercel.app'.
 
 .PARAMETER Global
   When set, installs the SDK globally (npm install -g) and writes QAPI_KEY
@@ -62,7 +62,7 @@ param (
   [string]$Tier = "starter",
 
   [Parameter(HelpMessage = "QAPi Core Service base URL")]
-  [string]$BaseUrl = "https://api.qapi.dev",
+  [string]$BaseUrl = "https://qapi-omega.vercel.app",
 
   [Parameter(HelpMessage = "Install the SDK globally and persist environment variables")]
   [switch]$Global,
@@ -104,10 +104,10 @@ if ($Uninstall) {
   $env:QAPI_KEY = $null
   $env:QAPI_BASE_URL = $null
 
-  Write-Step "Uninstalling global @qapi/sdk…"
+  Write-Step "Uninstalling global @solanar/sdk…"
   $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
   if ($npmCmd) {
-    & npm uninstall -g @qapi/sdk 2>&1 | Out-Null
+    & npm uninstall -g @solanar/sdk 2>&1 | Out-Null
   }
   Write-Ok "QAPi removed from this machine."
   exit 0
@@ -150,7 +150,7 @@ if (-not $ApiKey) {
     Write-Neon "  → Get a free Starter key at: $BaseUrl/../signup" 'Yellow'
     $ApiKey = Read-Host "  Enter your QAPi API key (or press Enter to open the signup page)"
     if (-not $ApiKey) {
-      $signupUrl = "https://qapi.dev/signup"
+      $signupUrl = "https://qapi-omega.vercel.app/signup"
       Write-Step "Opening $signupUrl in your browser…"
       Start-Process $signupUrl -ErrorAction SilentlyContinue
       Write-Warn "Re-run bootstrap.ps1 after you have your key:"
@@ -179,20 +179,20 @@ try {
   Write-Warn "Error: $_"
 }
 
-# ── Step 4: Install @qapi/sdk ─────────────────────────────────────────────────
-Write-Step "Installing @qapi/sdk$(if ($Global) { ' globally' } else { ' locally' })…"
-if ($PSCmdlet.ShouldProcess("@qapi/sdk", "npm install")) {
+# ── Step 4: Install @solanar/sdk ─────────────────────────────────────────────────
+Write-Step "Installing @solanar/sdk$(if ($Global) { ' globally' } else { ' locally' })…"
+if ($PSCmdlet.ShouldProcess("@solanar/sdk", "npm install")) {
   if ($Global) {
-    & npm install -g @qapi/sdk 2>&1 | Tee-Object -Variable npmOut | Out-Null
+    & npm install -g @solanar/sdk 2>&1 | Tee-Object -Variable npmOut | Out-Null
   } else {
     # Local install — create package.json if it doesn't exist
     if (-not (Test-Path "package.json")) {
       Write-Warn "No package.json found — running npm init -y first."
       & npm init -y 2>&1 | Out-Null
     }
-    & npm install @qapi/sdk 2>&1 | Tee-Object -Variable npmOut | Out-Null
+    & npm install @solanar/sdk 2>&1 | Tee-Object -Variable npmOut | Out-Null
   }
-  Write-Ok "@qapi/sdk installed."
+  Write-Ok "@solanar/sdk installed."
 }
 
 # ── Step 5: Set environment variables ─────────────────────────────────────────
@@ -221,9 +221,9 @@ Write-Neon "  API Key : $($ApiKey.Substring(0, [Math]::Min(24, $ApiKey.Length)))
 Write-Neon "  Base URL: $BaseUrl" 'White'
 Write-Neon ""
 Write-Neon "  Usage:" 'Cyan'
-Write-Neon '  const { QAPiClient } = require("@qapi/sdk");' 'DarkGray'
+Write-Neon '  const { QAPiClient } = require("@solanar/sdk");' 'DarkGray'
 Write-Neon '  const client = new QAPiClient({ apiKey: process.env.QAPI_KEY });' 'DarkGray'
 Write-Neon '  const mod = await client.resolve("express");' 'DarkGray'
 Write-Neon ""
-Write-Neon "  Docs: https://qapi.dev/docs" 'DarkGray'
+Write-Neon "  Docs: https://qapi-omega.vercel.app/docs" 'DarkGray'
 Write-Neon ""

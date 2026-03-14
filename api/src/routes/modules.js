@@ -4,8 +4,8 @@
 const express = require("express");
 const { requireTier } = require("../middleware/auth");
 const { listNodes, getNode, findNodeByName, upsertNode } = require("../data/moduleStore");
-const { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } = require("@qapi/core-brain/lib/module-resolver");
-const { redactToken } = require("@qapi/core-brain/lib/tier-manager");
+const { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } = require("@solanar/core-brain/lib/module-resolver");
+const { redactToken } = require("@solanar/core-brain/lib/tier-manager");
 
 const TIER_ORDER = ["starter", "pro", "audited"];
 

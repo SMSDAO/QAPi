@@ -130,7 +130,7 @@ curl -X POST https://qapi-omega.vercel.app/modules \
     "version": "1.0.0",
     "source": {
       "type": "vps",
-      "url": "https://vps.qapi.dev/modules/my-library.git",
+      "url": "https://vps.qapi-omega.vercel.app/modules/my-library.git",
       "branch": "main",
       "entrypoint": "index.js",
       "privateVps": true,

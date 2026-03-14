@@ -1,11 +1,11 @@
 # SDK Integration Guide
 
-The `@qapi/sdk` package is a lightweight, framework-agnostic client for the QAPi Core Service.
+The `@solanar/sdk` package is a lightweight, framework-agnostic client for the QAPi Core Service.
 
 ## Installation
 
 ```bash
-npm install @qapi/sdk
+npm install @solanar/sdk
 ```
 
 ---
@@ -13,7 +13,7 @@ npm install @qapi/sdk
 ## Initialisation
 
 ```js
-const { QAPiClient, QAPiError, signup } = require("@qapi/sdk");
+const { QAPiClient, QAPiError, signup } = require("@solanar/sdk");
 
 const client = new QAPiClient({
   apiKey:  process.env.QAPI_KEY,            // required
@@ -169,7 +169,7 @@ Common error codes:
 // Load the bootstrap hook first (in your entry file or via NODE_OPTIONS)
 require("./qapi-register.cjs");
 
-const { QAPiClient } = require("@qapi/sdk");
+const { QAPiClient } = require("@solanar/sdk");
 const client = new QAPiClient({ apiKey: process.env.QAPI_KEY });
 ```
 
@@ -197,7 +197,7 @@ Set `QAPI_KEY` and `QAPI_BASE_URL` as environment variables in your serverless p
 
 ```js
 // api/resolve.js (Vercel Serverless Function)
-const { QAPiClient } = require("@qapi/sdk");
+const { QAPiClient } = require("@solanar/sdk");
 const client = new QAPiClient({ apiKey: process.env.QAPI_KEY });
 
 module.exports = async (req, res) => {

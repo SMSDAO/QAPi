@@ -12,7 +12,7 @@ Instead of installing dependencies locally, your project **streams** them via th
 ┌─────────────────────────────────────────────────────────┐
 │  Developer Machine                                       │
 │                                                         │
-│  project/                  @qapi/sdk                    │
+│  project/                  @solanar/sdk                    │
 │    └─ app.js  ──require──▶  client.resolve("express")   │
 └────────────────────────────────┬────────────────────────┘
                                  │ HTTPS  X-QAPi-Key header
@@ -67,7 +67,7 @@ QAPi/
 │   │       └── api.test.js     # Node.js built-in test runner
 │   └── package.json
 │
-├── sdk/                        # @qapi/sdk — lightweight client
+├── sdk/                        # @solanar/sdk — lightweight client
 │   ├── src/
 │   │   ├── index.js            # QAPiClient, QAPiError, signup()
 │   │   └── tests/
@@ -90,7 +90,7 @@ QAPi/
 
 ### 1. Get an API Key
 
-Sign up at [qapi.dev/signup](https://qapi.dev/signup) or use the API:
+Sign up at [qapi-omega.vercel.app/signup](https://qapi-omega.vercel.app/signup) or use the API:
 
 ```bash
 curl -X POST https://qapi-omega.vercel.app/auth/signup \
@@ -101,13 +101,13 @@ curl -X POST https://qapi-omega.vercel.app/auth/signup \
 ### 2. Install the SDK
 
 ```bash
-npm install @qapi/sdk
+npm install @solanar/sdk
 ```
 
 ### 3. Resolve a module
 
 ```js
-const { QAPiClient } = require('@qapi/sdk');
+const { QAPiClient } = require('@solanar/sdk');
 
 const client = new QAPiClient({ apiKey: 'qapi-starter-YOUR_KEY' });
 const result = await client.resolve('express');
@@ -129,12 +129,45 @@ console.log(result.entrypoint);
 
 ## Running the API Locally
 
+### Prerequisites
+
+- Node.js ≥ 18.0.0
+- npm ≥ 9
+
+### Install all workspace dependencies
+
 ```bash
-cd api
-npm install
-npm start          # production
-npm run dev        # watch mode (Node 18+)
-npm test           # run 19 tests
+node scripts/bootstrap.js
+```
+
+Or install each package individually:
+
+```bash
+npm --prefix apps/core install && npm --prefix apps/core run build
+npm --prefix api install
+npm --prefix sdk install
+```
+
+### Environment variables
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable            | Default   | Description                                       |
+|---------------------|-----------|---------------------------------------------------|
+| `PORT`              | `3000`    | Port the Express API server listens on            |
+| `QAPI_BLOB_BASE_URL`| —         | Base URL for blob-hosted modules (optional)       |
+| `API_BASE_URL`      | Vercel URL| Public base URL of the deployed API               |
+| `NODE_ENV`          | —         | Set to `production` for production deployments    |
+
+### Run the API
+
+```bash
+npm --prefix api run start   # production
+npm --prefix api run dev     # watch mode (Node 18+)
 ```
 
 The service starts on port `3000` by default (`PORT` env var to override).
@@ -146,6 +179,44 @@ The service starts on port `3000` by default (`PORT` env var to override).
 | `qapi-starter-demo-key`    | starter  |
 | `qapi-pro-demo-key`        | pro      |
 | `qapi-audited-demo-key`    | audited  |
+
+### Run all tests
+
+```bash
+npm test                    # all packages (api + sdk + core)
+npm run test:api            # API tests only
+npm run test:sdk            # SDK tests only
+npm run test:core           # core-brain tests only
+```
+
+### Build all packages
+
+```bash
+npm run build               # build core-brain + SDK + typecheck
+```
+
+---
+
+## Deploy to Vercel
+
+The repository includes a `vercel.json` at the root that configures:
+- `apps/core/api/*.ts` → `@vercel/node` serverless functions
+- `dashboard/**` → `@vercel/static` static hosting
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy to preview
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+Ensure the following environment variables are set in your Vercel project settings:
+- `QAPI_BLOB_BASE_URL` (if using blob modules)
+- `NODE_ENV=production`
 
 ---
 
