@@ -10,37 +10,12 @@
 
 import { SUBSCRIPTION_FEATURES, parseTier } from "../lib/subscription-tiers.js";
 import { parseBearerToken, tierFromToken } from "../lib/tier-manager.js";
-
-const ALLOWED_ORIGINS = new Set([
-  "https://qapi-omega.vercel.app",
-  "http://localhost:3000",
-  "http://localhost:5500",
-]);
-
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "";
-  const allowOrigin = ALLOWED_ORIGINS.has(origin)
-    ? origin
-    : "https://qapi-omega.vercel.app";
-  return {
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-QAPi-Key, Authorization",
-    Vary: "Origin",
-  };
-}
-
-function json(
-  data: unknown,
-  status = 200,
-  extra: Record<string, string> = {}
-): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...extra },
-  });
-}
+import {
+  corsHeaders,
+  jsonResponse,
+  verifyKey,
+  getKeySecret,
+} from "../lib/serverless-utils.js";
 
 const TIER_DEFS = [
   {
@@ -69,21 +44,19 @@ const TIER_DEFS = [
   },
 ];
 
-/** Minimal key-format validation: must be `qapi-{tier}-{non-empty-suffix}`. */
-function isValidKeyFormat(key: string): boolean {
-  const tierIds = TIER_DEFS.map((t) => t.id).join("|");
-  return new RegExp(`^qapi-(${tierIds})-.{8,}$`).test(key);
-}
-
 export default async function handler(req: Request): Promise<Response> {
-  const cors = corsHeaders(req);
+  const cors = corsHeaders(req, "GET,OPTIONS");
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: cors });
   }
 
   if (req.method !== "GET") {
-    return json({ error: "Method Not Allowed", code: "METHOD_NOT_ALLOWED" }, 405, cors);
+    return jsonResponse(
+      { error: "Method Not Allowed", code: "METHOD_NOT_ALLOWED" },
+      405,
+      cors
+    );
   }
 
   const url = new URL(req.url);
@@ -96,26 +69,34 @@ export default async function handler(req: Request): Promise<Response> {
   if (tierId) {
     const tier = parseTier(tierId);
     if (!tier) {
-      return json({ error: `Tier '${tierId}' not found.`, code: "TIER_NOT_FOUND" }, 404, cors);
+      return jsonResponse(
+        { error: `Tier '${tierId}' not found.`, code: "TIER_NOT_FOUND" },
+        404,
+        cors
+      );
     }
     const def = TIER_DEFS.find((d) => d.id === tier);
     if (!def) {
-      return json({ error: `Tier '${tierId}' not found.`, code: "TIER_NOT_FOUND" }, 404, cors);
+      return jsonResponse(
+        { error: `Tier '${tierId}' not found.`, code: "TIER_NOT_FOUND" },
+        404,
+        cors
+      );
     }
-    return json(def, 200, cors);
+    return jsonResponse(def, 200, cors);
   }
 
-  // List all tiers
+  // List all tiers — optionally include callerTier if a valid key is provided
   const rawKey =
     req.headers.get("x-qapi-key") ||
     parseBearerToken(req.headers.get("authorization"));
 
   let callerTier: string | undefined;
-  if (rawKey && isValidKeyFormat(rawKey)) {
+  if (rawKey && verifyKey(rawKey, getKeySecret())) {
     callerTier = tierFromToken(rawKey);
   }
 
-  return json(
+  return jsonResponse(
     {
       tiers: TIER_DEFS,
       ...(callerTier !== undefined && { callerTier }),
