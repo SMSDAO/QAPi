@@ -9,6 +9,7 @@
  */
 
 import { SUBSCRIPTION_FEATURES, parseTier } from "../lib/subscription-tiers.js";
+import { randomUUID } from "node:crypto";
 
 const ALLOWED_ORIGINS = new Set([
   "https://qapi-omega.vercel.app",
@@ -94,7 +95,7 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   // Generate self-validating API key: qapi-{tier}-{uuid}
-  const apiKey = `qapi-${tier}-${crypto.randomUUID()}`;
+  const apiKey = `qapi-${tier}-${randomUUID()}`;
   const createdAt = new Date().toISOString();
 
   return json(
