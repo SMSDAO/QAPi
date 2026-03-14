@@ -101,7 +101,7 @@ Every scan result is:
 1. Persisted to the Module Node record (`node.audit`).
 2. Written as a structured JSON log line to `stdout`.
 3. Stored in the in-process ring buffer (`GET /metrics/logs`).
-4. Visible in the [QAPi Dashboard](https://qapi.dev) under the module's drill-down view.
+4. Visible in the [QAPi Dashboard](https://qapi-omega.vercel.app) under the module's drill-down view.
 
 ---
 

@@ -109,21 +109,21 @@ describe("blobUrl", () => {
   });
 
   test("builds correct URL when base URL is configured", () => {
-    process.env.QAPI_BLOB_BASE_URL = "https://blobs.qapi.dev";
+    process.env.QAPI_BLOB_BASE_URL = "https://blobs.qapi-omega.vercel.app";
     const url = blobUrl("libs/util.js");
-    assert.equal(url, "https://blobs.qapi.dev/libs/util.js");
+    assert.equal(url, "https://blobs.qapi-omega.vercel.app/libs/util.js");
     delete process.env.QAPI_BLOB_BASE_URL;
   });
 
   test("strips trailing slash from base URL", () => {
-    process.env.QAPI_BLOB_BASE_URL = "https://blobs.qapi.dev/";
+    process.env.QAPI_BLOB_BASE_URL = "https://blobs.qapi-omega.vercel.app/";
     const url = blobUrl("a/b.js");
-    assert.equal(url, "https://blobs.qapi.dev/a/b.js");
+    assert.equal(url, "https://blobs.qapi-omega.vercel.app/a/b.js");
     delete process.env.QAPI_BLOB_BASE_URL;
   });
 
   test("URI-encodes spaces in path", () => {
-    process.env.QAPI_BLOB_BASE_URL = "https://blobs.qapi.dev";
+    process.env.QAPI_BLOB_BASE_URL = "https://blobs.qapi-omega.vercel.app";
     const url = blobUrl("my module/index.js");
     assert.ok(url?.includes("my%20module"));
     delete process.env.QAPI_BLOB_BASE_URL;

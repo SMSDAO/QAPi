@@ -112,16 +112,16 @@
         <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">Quick Start</h2>
 
         <h3 class="text-neon-purple font-bold mt-6 mb-2">1. Get an API key</h3>
-        <p class="text-gray-400 mb-3">Sign up at <a href="signup.html" class="text-neon-cyan hover:underline">qapi.dev/signup</a> or call the API directly:</p>
+        <p class="text-gray-400 mb-3">Sign up at <a href="signup.html" class="text-neon-cyan hover:underline">qapi-omega.vercel.app/signup</a> or call the API directly:</p>
         <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>curl -X POST https://qapi-omega.vercel.app/auth/signup \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","tier":"starter"}'</code></pre>
 
         <h3 class="text-neon-purple font-bold mt-8 mb-2">2. Install the SDK</h3>
-        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>npm install @qapi/sdk</code></pre>
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>npm install @solanar/sdk</code></pre>
 
         <h3 class="text-neon-purple font-bold mt-8 mb-2">3. Resolve your first module</h3>
-        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { QAPiClient } = require('@qapi/sdk');
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { QAPiClient } = require('@solanar/sdk');
 
 const client = new QAPiClient({ apiKey: 'qapi-starter-YOUR_KEY' });
 
@@ -144,16 +144,16 @@ Authorization: Bearer qapi-starter-YOUR_KEY</code></pre>
       <!-- ── SDK – Installation ── -->
       <section id="sdk-install">
         <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">SDK – Installation</h2>
-        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>npm install @qapi/sdk
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>npm install @solanar/sdk
 # or
-yarn add @qapi/sdk</code></pre>
+yarn add @solanar/sdk</code></pre>
         <p class="text-gray-400 mt-3">The SDK has <strong class="text-white">zero dependencies</strong>. It uses Node.js built-in <code class="text-neon-cyan">http</code>/<code class="text-neon-cyan">https</code> modules.</p>
       </section>
 
       <!-- ── SDK – QAPiClient ── -->
       <section id="sdk-client">
         <h2 class="text-2xl font-bold text-neon-cyan glow-cyan mb-4">QAPiClient</h2>
-        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { QAPiClient } = require('@qapi/sdk');
+        <pre class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-neon-cyan"><code>const { QAPiClient } = require('@solanar/sdk');
 
 const client = new QAPiClient({
   apiKey:  'qapi-starter-YOUR_KEY',   // required
@@ -332,7 +332,7 @@ irm https://raw.githubusercontent.com/SMSDAO/QAPi/main/bootstrap.ps1 | iex
 
 # Then in your project:
 $env:QAPI_KEY = "qapi-starter-YOUR_KEY"
-node -r @qapi/sdk/register ./your-app.js</code></pre>
+node -r @solanar/sdk/register ./your-app.js</code></pre>
       </section>
 
       <!-- ── Terms ── -->

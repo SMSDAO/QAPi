@@ -1,11 +1,11 @@
 import { parseBearerToken, tierFromToken, redactToken, type Tier } from "../lib/tier-manager.js";
 import { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } from "../lib/module-resolver.js";
 
-const ALLOWED_ORIGINS = new Set(["https://qapi.github.io", "http://localhost:3000"]);
+const ALLOWED_ORIGINS = new Set(["https://qapi-omega.vercel.app", "http://localhost:3000"]);
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
-  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://qapi.github.io";
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://qapi-omega.vercel.app";
 
   return {
     "Access-Control-Allow-Credentials": "true",

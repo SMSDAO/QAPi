@@ -12,7 +12,7 @@
  *  - Advanced monitoring section (Pro+ tiers)
  *  - Skeleton loading states
  *
- * Dependencies: recharts (peer), @qapi/sdk
+ * Dependencies: recharts (peer), @solanar/sdk
  * Note: Recharts is imported dynamically to keep SSR bundle lean.
  */
 

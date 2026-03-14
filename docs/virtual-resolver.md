@@ -9,14 +9,14 @@ QAPi's Virtual Module Resolver intercepts Node.js `require()` / `import` calls a
 ```
 Developer Code
     │
-    └─ require("@qapi/some-module")
+    └─ require("/some-module")
           │
           ▼
    ┌─────────────────────────┐
    │  qapi-register.cjs      │  ← CommonJS hook
    │  (or qapi-loader.mjs)   │  ← ESM loader
    └────────────┬────────────┘
-                │  GET /modules/resolve?name=@qapi/some-module
+                │  GET /modules/resolve?name=/some-module
                 ▼
    ┌────────────────────────────┐
    │  QAPi Core Service (API)   │
@@ -42,7 +42,7 @@ Developer Code
 
 1. Validates Node.js ≥ 18 and npm.
 2. Detects the environment (`local-dev`, `ci`, `vercel`, `vps`).
-3. Installs `@qapi/sdk` globally or locally.
+3. Installs `@solanar/sdk` globally or locally.
 4. Writes `qapi-loader.mjs` (ESM loader hook) and `qapi-register.cjs` (CJS require hook).
 5. Sets `QAPI_KEY`, `QAPI_BASE_URL`, and `QAPI_TIER` in the current shell session.
 6. Optionally persists env vars to `~/.bashrc` / `~/.zshrc`.
@@ -115,7 +115,7 @@ The API and loader hooks each emit JSON logs on different streams:
   "ts": "2026-03-11T05:00:00.000Z",
   "level": "info",
   "event": "resolution",
-  "module": "@qapi/some-module",
+  "module": "/some-module",
   "source": "qapi-loader"
 }
 ```
@@ -124,7 +124,7 @@ The API logs are:
 - Written to `stdout` (full entry including `ip` and `keyId`).
 - Collected in a 200-event ring buffer with `ip` and `keyId` set to `null` (to protect client privacy on the public endpoint).
 - Accessible via `GET /metrics/logs` (ring buffer, redacted).
-- Visualised in the [QAPi Dashboard](https://qapi.dev).
+- Visualised in the [QAPi Dashboard](https://qapi-omega.vercel.app).
 
 ---
 

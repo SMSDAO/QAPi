@@ -1,5 +1,5 @@
 {
-  "name": "@qapi/core-brain",
+  "name": "@solanar/core-brain",
   "private": true,
   "version": "0.0.1",
   "type": "module",

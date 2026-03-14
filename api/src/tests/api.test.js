@@ -189,7 +189,7 @@ describe("GET /modules/resolve", () => {
   });
 
   test("starter cannot resolve pro-tier module", async () => {
-    const { status, body } = await req("GET", "/modules/resolve?name=@qapi/vps-module-alpha", {
+    const { status, body } = await req("GET", "/modules/resolve?name=@solanar/vps-module-alpha", {
       headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
     });
     assert.equal(status, 403);
@@ -197,7 +197,7 @@ describe("GET /modules/resolve", () => {
   });
 
   test("pro can resolve pro-tier module", async () => {
-    const { status, body } = await req("GET", "/modules/resolve?name=@qapi/vps-module-alpha", {
+    const { status, body } = await req("GET", "/modules/resolve?name=@solanar/vps-module-alpha", {
       headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
     });
     assert.equal(status, 200);
@@ -461,7 +461,7 @@ describe("GET /v1/modules/:sha", () => {
     });
     assert.equal(status, 200);
     assert.equal(body.resolved, true);
-    assert.equal(body.module.name, "@qapi/vps-module-alpha");
+    assert.equal(body.module.name, "@solanar/vps-module-alpha");
   });
 
   test("synthesizes metadata from GitHub when SHA is unknown + owner/repo/path given", async () => {

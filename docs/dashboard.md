@@ -1,6 +1,6 @@
 # Dashboard Guide
 
-The QAPi Dashboard is an operator-grade HTML5 + Tailwind CSS UI hosted on Vercel at [qapi.dev](https://qapi.dev).
+The QAPi Dashboard is an operator-grade HTML5 + Tailwind CSS UI hosted on Vercel at [qapi-omega.vercel.app](https://qapi-omega.vercel.app).
 
 ---
 
