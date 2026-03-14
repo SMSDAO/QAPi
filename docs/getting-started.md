@@ -18,7 +18,7 @@
 
 ### Via the dashboard
 
-Go to [qapi.dev/signup](https://qapi.dev/signup) and fill in your email and desired tier.
+Go to [qapi-omega.vercel.app/signup](https://qapi-omega.vercel.app/signup) and fill in your email and desired tier.
 
 ### Via the API
 
@@ -59,7 +59,7 @@ Response:
 ## 3. Install the SDK
 
 ```bash
-npm install @qapi/sdk
+npm install @solanar/sdk
 ```
 
 Or let the bootstrap script install it for you (see above).
@@ -69,7 +69,7 @@ Or let the bootstrap script install it for you (see above).
 ## 4. Resolve your first module
 
 ```js
-const { QAPiClient } = require("@qapi/sdk");
+const { QAPiClient } = require("@solanar/sdk");
 
 const client = new QAPiClient({
   apiKey: process.env.QAPI_KEY,  // set by bootstrap or manually
@@ -84,7 +84,7 @@ console.log(result.entrypoint);
 
 ## 5. Verify in the dashboard
 
-Open [qapi.dev](https://qapi.dev) and watch the **Live Module Call Trace** to see your request flow from SDK → API → Module Node.
+Open [qapi-omega.vercel.app](https://qapi-omega.vercel.app) and watch the **Live Module Call Trace** to see your request flow from SDK → API → Module Node.
 
 ---
 

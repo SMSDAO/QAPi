@@ -2,7 +2,7 @@
 "use strict";
 
 const { findKey, TIERS } = require("../data/keyStore");
-const { parseBearerToken, tierFromToken } = require("@qapi/core-brain/lib/tier-manager");
+const { parseBearerToken, tierFromToken } = require("@solanar/core-brain/lib/tier-manager");
 
 /**
  * Reads the API key from the `X-QAPi-Key` header (or `Authorization: Bearer <key>`),

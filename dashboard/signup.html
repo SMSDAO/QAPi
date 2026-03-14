@@ -201,7 +201,7 @@
         document.getElementById('signup-form').classList.add('hidden');
         document.getElementById('api-key-display').textContent = data.apiKey;
         document.getElementById('sdk-snippet').textContent =
-`const { QAPiClient } = require('@qapi/sdk');
+`const { QAPiClient } = require('@solanar/sdk');
 const client = new QAPiClient({ apiKey: '${data.apiKey}' });
 const module = await client.resolve('express');`;
         document.getElementById('success-box').classList.remove('hidden');

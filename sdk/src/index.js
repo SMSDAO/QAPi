@@ -1,11 +1,11 @@
 /**
- * @qapi/sdk – Virtual Module Resolver
+ * @solanar/sdk – Virtual Module Resolver
  *
  * Drop-in replacement for `require()` / `import` that resolves modules
  * through the QAPi Core Service instead of local node_modules.
  *
  * Usage:
- *   const { QAPiClient } = require("@qapi/sdk");
+ *   const { QAPiClient } = require("@solanar/sdk");
  *   const client = new QAPiClient({ apiKey: "qapi-starter-...", baseUrl: "https://qapi-omega.vercel.app" });
  *   const info = await client.resolve("express");
  */

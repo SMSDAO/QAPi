@@ -102,13 +102,13 @@ describe("client.resolve()", () => {
 
   test("throws QAPiError(403) when tier insufficient", async () => {
     await assert.rejects(
-      () => starterClient.resolve("@qapi/vps-module-alpha"),
+      () => starterClient.resolve("@solanar/vps-module-alpha"),
       (err) => err instanceof QAPiError && err.statusCode === 403
     );
   });
 
   test("pro tier resolves pro module", async () => {
-    const result = await proClient.resolve("@qapi/vps-module-alpha");
+    const result = await proClient.resolve("@solanar/vps-module-alpha");
     assert.equal(result.resolved, true);
   });
 });
