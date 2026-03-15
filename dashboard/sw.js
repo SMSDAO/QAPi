@@ -10,6 +10,8 @@ const STATIC_SHELL = [
   '/index.html',
   '/signup.html',
   '/docs.html',
+  '/admin.html',
+  '/developer.html',
 ];
 
 // Prefixes that belong to the Vercel Brain or core API — always pass through

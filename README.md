@@ -4,6 +4,24 @@
 
 Instead of installing dependencies locally, your project **streams** them via the QAPi SDK, which dynamically links to globally hosted repositories on GitHub or private VPS instances.
 
+[![CI](https://github.com/SMSDAO/QAPi/actions/workflows/ci.yml/badge.svg)](https://github.com/SMSDAO/QAPi/actions/workflows/ci.yml)
+[![Node.js ≥ 18](https://img.shields.io/badge/node-%E2%89%A518-brightgreen)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSMSDAO%2FQAPi)
+
+---
+
+## UI Preview
+
+### User Dashboard
+![User Dashboard](docs/assets/ui/user-dashboard.png)
+
+### Admin Dashboard
+![Admin Dashboard](docs/assets/ui/admin-dashboard.png)
+
+### Developer Dashboard
+![Developer Dashboard](docs/assets/ui/dev-dashboard.png)
+
 ---
 
 ## Architecture

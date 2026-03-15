@@ -57,6 +57,8 @@ jobs:
         run: cd api && npm ci
       - name: Run API tests
         run: cd api && npm test
+      - name: Security audit (API)
+        run: cd api && npm audit --audit-level=high
 
   test-sdk:
     name: SDK Tests (Node ${{ matrix.node }})
@@ -81,6 +83,8 @@ jobs:
         run: cd api && npm ci
       - name: Run SDK tests
         run: cd sdk && npm test
+      - name: Security audit (SDK)
+        run: cd sdk && npm audit --audit-level=high
 
   test-core:
     name: Core Brain Tests (Node 22)

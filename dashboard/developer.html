@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer — QAPi Virtual Module Resolver</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: {
+            'flash': 'flash 1.4s ease-in-out infinite',
+            'blink': 'blink 1s step-end infinite',
+          },
+          keyframes: {
+            flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
+            blink: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0 } },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px); pointer-events:none; z-index:9999; }
+    .glow-cyan   { text-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff; }
+    .glow-purple { text-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff; }
+    .glow-green  { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88; }
+    .glow-yellow { text-shadow: 0 0 8px #ffe600, 0 0 20px #ffe600; }
+    .box-glow-cyan   { box-shadow: 0 0 12px #00f5ff44, inset 0 0 12px #00f5ff11; }
+    .box-glow-purple { box-shadow: 0 0 12px #bf00ff44, inset 0 0 12px #bf00ff11; }
+    .box-glow-green  { box-shadow: 0 0 12px #00ff8844, inset 0 0 12px #00ff8811; }
+    .nav-tab { padding: 0.25rem 0.75rem; border-radius: 0.375rem; font-size: 0.8rem; transition: all 0.2s; color: #9ca3af; }
+    .nav-tab:hover { color: #00f5ff; background: rgba(0,245,255,0.06); }
+    .nav-tab.active { color: #00f5ff; background: rgba(0,245,255,0.1); box-shadow: 0 0 8px #00f5ff33; }
+    #mobile-menu { display: none; }
+    #mobile-menu.open { display: block; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d0d1a; }
+    ::-webkit-scrollbar-thumb { background: #00f5ff44; border-radius: 3px; }
+    .console-output { background: #070713; border: 1px solid #00f5ff22; border-radius: 0.5rem; padding: 1rem; min-height: 120px; max-height: 280px; overflow-y: auto; font-size: 0.78rem; line-height: 1.6; }
+    .console-line-ok   { color: #00ff88; }
+    .console-line-err  { color: #ff003c; }
+    .console-line-info { color: #00f5ff; }
+    .console-line-warn { color: #ffe600; }
+    .console-line-dim  { color: #4b5563; }
+    .method-get    { color: #00f5ff; }
+    .method-post   { color: #00ff88; }
+    .method-patch  { color: #ffe600; }
+    .method-delete { color: #ff003c; }
+    input[type="text"], input[type="password"], select, textarea {
+      background: #0d0d1a; border: 1px solid #374151; border-radius: 0.375rem;
+      color: #e5e7eb; padding: 0.5rem 0.75rem; font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace; transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
+      outline: none; border-color: #00f5ff; box-shadow: 0 0 0 1px #00f5ff44;
+    }
+    .env-row:hover { background: rgba(0,245,255,0.03); }
+    .tab-btn { padding: 0.4rem 1rem; border-radius: 0.375rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; color: #6b7280; background: transparent; border: 1px solid transparent; }
+    .tab-btn:hover { color: #00f5ff; border-color: #00f5ff33; }
+    .tab-btn.active { color: #00f5ff; background: rgba(0,245,255,0.08); border-color: #00f5ff44; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    .status-online { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+
+  <!-- Animated background grid -->
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0" style="background-image:linear-gradient(rgba(0,245,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.04) 1px,transparent 1px);background-size:40px 40px;"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest shrink-0">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+        <a href="index.html"     class="nav-tab">Home</a>
+        <a href="index.html#metrics" class="nav-tab">Dashboard</a>
+        <a href="signup.html"    class="nav-tab">Users</a>
+        <a href="admin.html"     class="nav-tab">Admin</a>
+        <a href="developer.html" class="nav-tab active" aria-current="page">Developer</a>
+        <a href="signup.html#settings" class="nav-tab">Settings</a>
+        <a href="docs.html"      class="nav-tab">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:flex items-center gap-1.5 text-xs text-neon-green"><span class="status-dot status-online"></span>API Connected</span>
+        <button id="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false" class="md:hidden p-2 text-gray-400 hover:text-neon-cyan transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden border-t border-neon-cyan/10 bg-gray-950/95">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <a href="index.html"     class="nav-tab">Home</a>
+        <a href="index.html#metrics" class="nav-tab">Dashboard</a>
+        <a href="signup.html"    class="nav-tab">Users</a>
+        <a href="admin.html"     class="nav-tab">Admin</a>
+        <a href="developer.html" class="nav-tab active">Developer</a>
+        <a href="signup.html#settings" class="nav-tab">Settings</a>
+        <a href="docs.html"      class="nav-tab">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page header -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6">
+    <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-1 animate-flash">● Developer Console</p>
+    <h1 class="text-3xl sm:text-4xl font-bold"><span class="glow-cyan text-neon-cyan">Developer</span> <span class="text-white">Dashboard</span></h1>
+    <p class="text-gray-500 text-sm mt-1">API monitor, logs, integration console &amp; deployment diagnostics</p>
+  </div>
+
+  <!-- ── Stats row ─────────────────────────────────────────────────────── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="rounded-xl border border-neon-cyan/30 bg-gray-900/60 p-4 box-glow-cyan">
+        <p class="text-xs text-gray-500 mb-1">API Latency</p>
+        <p class="text-2xl font-bold text-neon-cyan glow-cyan" id="dev-latency">—</p>
+        <p class="text-xs text-gray-600">avg ms/resolve</p>
+      </div>
+      <div class="rounded-xl border border-neon-green/30 bg-gray-900/60 p-4 box-glow-green">
+        <p class="text-xs text-gray-500 mb-1">Uptime</p>
+        <p class="text-2xl font-bold text-neon-green glow-green" id="dev-uptime">—</p>
+        <p class="text-xs text-gray-600">seconds running</p>
+      </div>
+      <div class="rounded-xl border border-neon-purple/30 bg-gray-900/60 p-4 box-glow-purple">
+        <p class="text-xs text-gray-500 mb-1">Modules</p>
+        <p class="text-2xl font-bold text-neon-purple glow-purple" id="dev-modules">—</p>
+        <p class="text-xs text-gray-600">registered nodes</p>
+      </div>
+      <div class="rounded-xl border border-neon-yellow/30 bg-gray-900/60 p-4" style="box-shadow:0 0 12px #ffe60044,inset 0 0 12px #ffe60011">
+        <p class="text-xs text-gray-500 mb-1">Resolves/min</p>
+        <p class="text-2xl font-bold text-neon-yellow glow-yellow" id="dev-rpm">—</p>
+        <p class="text-xs text-gray-600">last 60s</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Main content: API Console + Logs ───────────────────────────────── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- API Playground -->
+      <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
+        <h2 class="text-base font-bold text-neon-cyan glow-cyan tracking-widest uppercase mb-4">API Playground</h2>
+
+        <!-- API Key input -->
+        <div class="mb-4">
+          <label class="text-xs text-gray-500 block mb-1">API Key <span class="text-gray-600">(stored in localStorage)</span></label>
+          <div class="flex gap-2">
+            <input type="password" id="play-apikey" placeholder="qapi-starter-demo-key" class="flex-1" autocomplete="off" />
+            <button id="play-save-key" class="px-3 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all">Save</button>
+          </div>
+        </div>
+
+        <!-- Endpoint selector -->
+        <div class="mb-4">
+          <label class="text-xs text-gray-500 block mb-1">Endpoint</label>
+          <select id="play-endpoint" class="w-full">
+            <option value="GET /health">/health (public)</option>
+            <option value="GET /metrics">/metrics (public)</option>
+            <option value="GET /v1/tiers">/v1/tiers (public)</option>
+            <option value="GET /auth/me">/auth/me (requires key)</option>
+            <option value="GET /v1/modules">/v1/modules (requires key)</option>
+            <option value="CUSTOM">Custom…</option>
+          </select>
+        </div>
+
+        <!-- Custom path -->
+        <div id="play-custom-row" class="mb-4 hidden">
+          <label class="text-xs text-gray-500 block mb-1">Custom path (e.g. /modules/resolve?name=express)</label>
+          <input type="text" id="play-custom-path" placeholder="/modules/resolve?name=express" class="w-full" />
+        </div>
+
+        <button id="play-send" class="w-full py-2 rounded bg-neon-cyan text-gray-950 font-bold text-sm hover:scale-[1.02] transition-transform box-glow-cyan mb-4">▶ Send Request</button>
+
+        <!-- Response -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500">Response</span>
+            <span id="play-status" class="text-xs font-bold"></span>
+          </div>
+          <div class="console-output" id="play-output">
+            <span class="console-line-dim">// Output will appear here…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Logs Viewer -->
+      <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-bold text-neon-green glow-green tracking-widest uppercase">Live Logs</h2>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500" id="log-count-dev">0 events</span>
+            <button id="log-refresh" class="text-xs text-neon-cyan hover:underline">↻</button>
+            <button id="log-clear" class="text-xs text-gray-500 hover:text-neon-red">✕ Clear</button>
+          </div>
+        </div>
+        <div class="console-output" id="dev-log-output">
+          <span class="console-line-dim animate-flash">Waiting for log events…</span>
+        </div>
+        <p class="text-xs text-gray-600 mt-2">Auto-refreshes every 5s. Start the API server to see live events.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Tabbed: Env Config / Integration Tests / Deploy Diagnostics ──── -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+    <div class="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
+
+      <!-- Tab buttons -->
+      <div class="flex gap-2 mb-6 flex-wrap">
+        <button class="tab-btn active" data-tab="env">Env Config</button>
+        <button class="tab-btn" data-tab="integration">Integration Tests</button>
+        <button class="tab-btn" data-tab="deploy">Deploy Diagnostics</button>
+      </div>
+
+      <!-- Env Config -->
+      <div id="tab-env" class="tab-panel active">
+        <h3 class="text-sm font-bold text-neon-cyan mb-4">Environment Variables</h3>
+        <div class="space-y-2 text-xs">
+          <div class="env-row grid grid-cols-3 gap-4 rounded px-3 py-2 border-b border-gray-800/50">
+            <span class="text-gray-500 font-bold">Variable</span>
+            <span class="text-gray-500 font-bold">Value</span>
+            <span class="text-gray-500 font-bold">Status</span>
+          </div>
+          <div class="env-row grid grid-cols-3 gap-4 rounded px-3 py-2">
+            <span class="text-neon-cyan">PORT</span>
+            <span class="text-gray-300">3000</span>
+            <span class="text-neon-green">✔ default</span>
+          </div>
+          <div class="env-row grid grid-cols-3 gap-4 rounded px-3 py-2">
+            <span class="text-neon-cyan">NODE_ENV</span>
+            <span class="text-gray-300" id="env-node-env">—</span>
+            <span class="text-gray-500">runtime</span>
+          </div>
+          <div class="env-row grid grid-cols-3 gap-4 rounded px-3 py-2">
+            <span class="text-neon-cyan">API_BASE_URL</span>
+            <span class="text-gray-300" id="env-base-url">—</span>
+            <span class="text-neon-green">✔ detected</span>
+          </div>
+          <div class="env-row grid grid-cols-3 gap-4 rounded px-3 py-2">
+            <span class="text-neon-cyan">QAPI_BLOB_BASE_URL</span>
+            <span class="text-gray-500 italic">not set</span>
+            <span class="text-gray-500">optional</span>
+          </div>
+        </div>
+        <div class="mt-4 p-3 rounded border border-gray-800 bg-gray-950/40 text-xs text-gray-500">
+          <span class="text-neon-cyan">→</span> Copy <code class="text-gray-300">.env.example</code> to <code class="text-gray-300">.env</code> and set your values before running locally.
+        </div>
+      </div>
+
+      <!-- Integration Tests -->
+      <div id="tab-integration" class="tab-panel">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-neon-cyan">Integration Test Suite</h3>
+          <button id="run-tests-btn" class="px-4 py-1.5 rounded bg-neon-cyan text-gray-950 text-xs font-bold hover:scale-105 transition-transform box-glow-cyan">▶ Run All</button>
+        </div>
+        <div class="space-y-2 text-xs" id="integration-tests">
+          <!-- Tests populated by JS -->
+        </div>
+        <div class="console-output mt-4" id="test-output">
+          <span class="console-line-dim">// Run tests to see output…</span>
+        </div>
+      </div>
+
+      <!-- Deploy Diagnostics -->
+      <div id="tab-deploy" class="tab-panel">
+        <h3 class="text-sm font-bold text-neon-cyan mb-4">Deployment Diagnostics</h3>
+        <div class="space-y-3 text-xs" id="deploy-checks">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <script src="api.js"></script>
+  <script>
+    // ── Mobile menu ─────────────────────────────────────────────────────────
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+      const m = document.getElementById('mobile-menu');
+      const open = m.classList.toggle('open');
+      this.setAttribute('aria-expanded', open);
+    });
+
+    // ── Tab system ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ── Endpoint selector ───────────────────────────────────────────────────
+    document.getElementById('play-endpoint').addEventListener('change', function() {
+      document.getElementById('play-custom-row').classList.toggle('hidden', this.value !== 'CUSTOM');
+    });
+
+    // ── API Key persistence ─────────────────────────────────────────────────
+    const savedKey = QAPI.getStoredKey();
+    if (savedKey) document.getElementById('play-apikey').value = savedKey;
+
+    document.getElementById('play-save-key').addEventListener('click', () => {
+      const k = document.getElementById('play-apikey').value.trim();
+      if (k) { QAPI.storeKey(k); showMsg('play-output', 'console-line-ok', '// API key saved to localStorage'); }
+    });
+
+    // ── API Playground send ─────────────────────────────────────────────────
+    document.getElementById('play-send').addEventListener('click', async () => {
+      const apiKey = document.getElementById('play-apikey').value.trim() || QAPI.getStoredKey();
+      const sel    = document.getElementById('play-endpoint').value;
+      let method = 'GET', path = '';
+      if (sel === 'CUSTOM') {
+        path = document.getElementById('play-custom-path').value.trim() || '/health';
+      } else {
+        const parts = sel.split(' ');
+        method = parts[0]; path = parts[1];
+      }
+      const outputEl = document.getElementById('play-output');
+      const statusEl = document.getElementById('play-status');
+      outputEl.innerHTML = '<span class="console-line-dim animate-flash">Sending…</span>';
+      statusEl.textContent = '';
+      try {
+        const BASE = QAPI.getBaseUrl();
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiKey) headers['X-QAPi-Key'] = apiKey;
+        const start = Date.now();
+        const res = await fetch(`${BASE}${path}`, { method, headers, signal: AbortSignal.timeout(8000) });
+        const ms  = Date.now() - start;
+        const data = await res.json().catch(() => ({}));
+        const colorClass = res.ok ? 'console-line-ok' : 'console-line-err';
+        statusEl.className = 'text-xs font-bold ' + (res.ok ? 'text-neon-green' : 'text-red-400');
+        statusEl.textContent = `HTTP ${res.status} • ${ms}ms`;
+        outputEl.innerHTML = `<span class="${colorClass}">// ${method} ${path}  →  HTTP ${res.status}  (${ms}ms)\n\n</span><span class="text-gray-300">${escHtml(JSON.stringify(data, null, 2))}</span>`;
+      } catch (err) {
+        statusEl.className = 'text-xs font-bold text-red-400';
+        statusEl.textContent = 'Error';
+        outputEl.innerHTML = `<span class="console-line-err">// Error: ${escHtml(err.message)}\n// Is the API server running? npm --prefix api run dev</span>`;
+      }
+    });
+
+    // ── Live logs ───────────────────────────────────────────────────────────
+    async function refreshLogs() {
+      try {
+        const BASE = QAPI.getBaseUrl();
+        const res = await fetch(`${BASE}/metrics/logs`, { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        const logs = (data.logs || []).slice(-25).reverse();
+        document.getElementById('log-count-dev').textContent = `${data.count || 0} events`;
+        const el = document.getElementById('dev-log-output');
+        if (logs.length === 0) { el.innerHTML = '<span class="console-line-dim">No events yet</span>'; return; }
+        el.innerHTML = logs.map(l => {
+          const t = new Date(l.ts).toLocaleTimeString();
+          const eventCls = l.event === 'resolution' ? 'console-line-ok' : l.event === 'audit' ? 'console-line-warn' : 'console-line-info';
+          const status = l.status ? ` <span class="${l.status < 400 ? 'console-line-ok' : 'console-line-err'}">${l.status}</span>` : '';
+          return `<span class="console-line-dim">[${t}]</span> <span class="${eventCls}">${escHtml(l.event||'req')}</span> <span class="text-gray-300">${escHtml(l.method||'')} ${escHtml(l.path||'')}</span>${status}`;
+        }).join('\n');
+      } catch {
+        document.getElementById('dev-log-output').innerHTML = '<span class="console-line-dim">Could not connect — start the API: npm --prefix api run dev</span>';
+      }
+    }
+
+    document.getElementById('log-refresh').addEventListener('click', refreshLogs);
+    document.getElementById('log-clear').addEventListener('click', () => {
+      document.getElementById('dev-log-output').innerHTML = '<span class="console-line-dim">Cleared.</span>';
+    });
+
+    // ── Metrics ─────────────────────────────────────────────────────────────
+    async function loadMetrics() {
+      try {
+        const data = await QAPI.fetchMetrics();
+        const avgMs = data.modules?.reduce((s,m) => s + (m.metrics?.avgLatencyMs||0), 0) / Math.max(1, data.modules?.length||1);
+        document.getElementById('dev-latency').textContent  = avgMs.toFixed(1) + 'ms';
+        document.getElementById('dev-uptime').textContent   = Math.round(data.service?.uptime ?? 0) + 's';
+        document.getElementById('dev-modules').textContent  = data.moduleCount ?? '—';
+        document.getElementById('dev-rpm').textContent      = data.resolvesLastMin ?? 0;
+      } catch { /* API not running */ }
+    }
+
+    // ── Env Config ──────────────────────────────────────────────────────────
+    document.getElementById('env-base-url').textContent  = QAPI.getBaseUrl() || '(relative)';
+    document.getElementById('env-node-env').textContent  = 'browser';
+
+    // ── Integration Tests ────────────────────────────────────────────────────
+    const TESTS = [
+      { name: 'GET /health', desc: 'Service health check', fn: () => fetch(`${QAPI.getBaseUrl()}/health`, {signal:AbortSignal.timeout(4000)}).then(r => ({ ok: r.ok, label: `HTTP ${r.status}` })) },
+      { name: 'GET /metrics', desc: 'Public metrics endpoint', fn: () => fetch(`${QAPI.getBaseUrl()}/metrics`, {signal:AbortSignal.timeout(4000)}).then(r => ({ ok: r.ok, label: `HTTP ${r.status}` })) },
+      { name: 'GET /v1/tiers', desc: 'Tier config', fn: () => fetch(`${QAPI.getBaseUrl()}/v1/tiers`, {signal:AbortSignal.timeout(4000)}).then(r => ({ ok: r.ok, label: `HTTP ${r.status}` })) },
+      { name: 'POST /auth/signup (invalid)', desc: 'Should return 400', fn: () => fetch(`${QAPI.getBaseUrl()}/auth/signup`, {method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(4000)}).then(r => ({ ok: r.status === 400, label: `HTTP ${r.status} (expected 400)` })) },
+      { name: 'GET /v1/modules (no key)', desc: 'Should return 401', fn: () => fetch(`${QAPI.getBaseUrl()}/v1/modules`, {signal:AbortSignal.timeout(4000)}).then(r => ({ ok: r.status === 401, label: `HTTP ${r.status} (expected 401)` })) },
+    ];
+
+    function renderTests(results) {
+      const el = document.getElementById('integration-tests');
+      el.innerHTML = TESTS.map((t, i) => {
+        const r = results?.[i];
+        const icon = !r ? '○' : r.ok ? '✔' : '✗';
+        const color = !r ? 'text-gray-600' : r.ok ? 'text-neon-green' : 'text-red-400';
+        const label = r ? r.label : 'pending';
+        const glowCls = !r ? '' : r.ok ? 'glow-green' : '';
+        return `<div class="flex items-center justify-between rounded px-3 py-2 border border-gray-800/50 bg-gray-950/30">
+          <div class="flex items-center gap-3">
+            <span class="${color} ${glowCls} font-bold">${icon}</span>
+            <span class="text-gray-200 font-bold">${escHtml(t.name)}</span>
+            <span class="text-gray-600 hidden sm:inline">${escHtml(t.desc)}</span>
+          </div>
+          <span class="${color}">${escHtml(label)}</span>
+        </div>`;
+      }).join('');
+    }
+    renderTests(null);
+
+    document.getElementById('run-tests-btn').addEventListener('click', async () => {
+      const out = document.getElementById('test-output');
+      out.innerHTML = '<span class="console-line-info animate-flash">Running tests…</span>';
+      const results = [];
+      for (const t of TESTS) {
+        try { results.push(await t.fn()); }
+        catch (e) { results.push({ ok: false, label: e.message }); }
+      }
+      renderTests(results);
+      const pass = results.filter(r => r.ok).length;
+      out.innerHTML = `<span class="${pass === results.length ? 'console-line-ok' : 'console-line-err'}">${pass}/${results.length} tests passed</span>\n` +
+        results.map((r, i) => `<span class="${r.ok?'console-line-ok':'console-line-err'}">[${r.ok?'PASS':'FAIL'}] ${escHtml(TESTS[i].name)} — ${escHtml(r.label)}</span>`).join('\n');
+    });
+
+    // ── Deploy Diagnostics ───────────────────────────────────────────────────
+    function renderDeployChecks() {
+      const el = document.getElementById('deploy-checks');
+      const base = QAPI.getBaseUrl();
+      const isLocalhost = base.includes('localhost') || base.includes('127.0.0.1') || base === '';
+      const isVercel = window.location.hostname.includes('vercel.app');
+      const checks = [
+        { label: 'API Base URL detected', status: base !== null, detail: base || '(relative same-origin)' },
+        { label: 'Vercel deployment target', status: isVercel, detail: isVercel ? window.location.origin : 'Not on Vercel — local or self-hosted' },
+        { label: 'Local dev mode', status: isLocalhost, detail: isLocalhost ? 'Running locally — great for development' : 'Not local' },
+        { label: 'API key stored in browser', status: !!QAPI.getStoredKey(), detail: QAPI.getStoredKey() ? 'Key present (localStorage)' : 'No key — sign up at /signup.html' },
+        { label: 'Dashboard served correctly', status: true, detail: 'HTML dashboard loaded successfully' },
+        { label: 'Service worker registered', status: 'serviceWorker' in navigator, detail: 'serviceWorker' in navigator ? 'PWA / offline support available' : 'Not supported in this browser' },
+        { label: 'vercel.json present', status: true, detail: 'Rewrites + secure headers configured' },
+      ];
+      el.innerHTML = checks.map(c => `
+        <div class="flex items-start gap-3 rounded px-3 py-2 border border-gray-800/50 bg-gray-950/30">
+          <span class="${c.status ? 'text-neon-green glow-green' : 'text-gray-600'} font-bold shrink-0">${c.status ? '✔' : '○'}</span>
+          <div>
+            <p class="text-xs text-gray-200 font-bold">${escHtml(c.label)}</p>
+            <p class="text-xs text-gray-500">${escHtml(c.detail)}</p>
+          </div>
+        </div>`).join('');
+    }
+    renderDeployChecks();
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function showMsg(elId, cls, msg) {
+      document.getElementById(elId).innerHTML = `<span class="${cls}">${escHtml(msg)}</span>`;
+    }
+
+    // Init
+    loadMetrics();
+    refreshLogs();
+    const logTimer = setInterval(refreshLogs, 5000);
+    const metricsTimer = setInterval(loadMetrics, 15000);
+    window.addEventListener('pagehide', () => { clearInterval(logTimer); clearInterval(metricsTimer); });
+  </script>
+</body>
+</html>

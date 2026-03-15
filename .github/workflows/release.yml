@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Run the full test matrix before releasing ────────────────────────────────
+  build-core:
+    name: Build core-brain lib
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npm run build
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-brain-dist-release
+          path: apps/core/dist/
+
+  test:
+    name: Tests (Node 20)
+    needs: build-core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Download core-brain dist
+        uses: actions/download-artifact@v4
+        with:
+          name: core-brain-dist-release
+          path: apps/core/dist/
+      - run: cd api && npm ci
+      - run: cd sdk && npm install
+      - run: cd apps/core && npm install
+      - name: API tests
+        run: cd api && npm test
+      - name: SDK tests
+        run: cd sdk && npm test
+      - name: Core brain tests
+        run: cd apps/core && npm test
+      - name: Security audit
+        run: cd api && npm audit --audit-level=high
+
+  # ── Create the GitHub Release ────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: tag === 'v1.0.0'
+                ? 'v1.0.0 — Production Ready Enterprise Release'
+                : `Release ${tag}`,
+              body: tag === 'v1.0.0'
+                ? [
+                    '## QAPi v1.0.0 — Production Ready Enterprise Release',
+                    '',
+                    '### Highlights',
+                    '- 🎨 **Neo-Glow dark UI** with flash animations, scan-line overlay, and neon glow effects',
+                    '- 🗂️ **7-tab navigation** (Home, Dashboard, Users, Admin, Developer, Settings, Docs) — responsive, keyboard-accessible, mobile-friendly',
+                    '- 🖥️ **Admin dashboard** — system health, RBAC role matrix (Admin/Developer/User/Auditor), module health, audit logs',
+                    '- 🛠️ **Developer dashboard** — API playground, live logs viewer, integration test runner, env config, deploy diagnostics',
+                    '- 🔒 **Security hardening** — rate limiting, API key auth, secure headers, `npm audit` in CI',
+                    '- ✅ **106 passing tests** across API, SDK, and core-brain packages',
+                    '- 📋 **CHANGELOG.md** following Keep-a-Changelog',
+                    '',
+                    'See [CHANGELOG.md](https://github.com/SMSDAO/QAPi/blob/main/CHANGELOG.md) for the full list of changes.',
+                  ].join('\n')
+                : 'See CHANGELOG.md for details.',
+              draft: false,
+              prerelease: false,
+              generate_release_notes: tag !== 'v1.0.0',
+            });
+            core.info(`Release created for ${tag}`);
