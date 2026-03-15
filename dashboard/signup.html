@@ -194,8 +194,9 @@
         // Use the shared QAPI client — auto-detects API URL for local dev + prod
         const data = await QAPI.signup(email, tier);
 
-        // Persist the key in localStorage so the dashboard can use it
+        // Persist the key and email in localStorage so the dashboard can use them
         QAPI.storeKey(data.apiKey);
+        if (data.email) QAPI.storeEmail(data.email);
 
         // Show success
         document.getElementById('signup-form').classList.add('hidden');

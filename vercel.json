@@ -2,20 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "name": "qapi-brain",
-  "builds": [
-    {
-      "src": "apps/core/api/*.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "dashboard/**/*.{html,js}",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/api/resolve", "dest": "/apps/core/api/resolve.ts" },
-    { "src": "/",            "dest": "/dashboard/index.html" },
-    { "src": "/(.*)",        "dest": "/dashboard/$1" }
+  "outputDirectory": "dashboard",
+  "functions": {
+    "apps/core/api/*.ts": {}
+  },
+  "rewrites": [
+    { "source": "/api/resolve",  "destination": "/apps/core/api/resolve" },
+    { "source": "/auth/signup",  "destination": "/apps/core/api/auth-signup" },
+    { "source": "/auth/me",      "destination": "/apps/core/api/auth-me" },
+    { "source": "/metrics",      "destination": "/apps/core/api/metrics" },
+    { "source": "/v1/modules",   "destination": "/apps/core/api/v1-modules" },
+    { "source": "/v1/tiers",         "destination": "/apps/core/api/v1-tiers" },
+    { "source": "/v1/tiers/:tierId", "destination": "/apps/core/api/v1-tiers" }
   ],
   "headers": [
     {
