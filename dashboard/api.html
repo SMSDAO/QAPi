@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Endpoints — QAPi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: { 'flash': 'flash 1.4s ease-in-out infinite' },
+          keyframes: { flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="neon-glow.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px); pointer-events:none; z-index:9999; }
+    #mobile-menu { display: none; }
+    #mobile-menu.open { display: block; }
+    .endpoint-card {
+      background: rgba(13,13,26,0.85);
+      border: 1px solid rgba(0,245,255,0.1);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .endpoint-card:hover { border-color: rgba(0,245,255,0.3); }
+    .ep-header {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+      padding: 0.9rem 1.25rem; cursor: pointer;
+    }
+    .ep-body { display: none; padding: 1rem 1.25rem; border-top: 1px solid rgba(0,245,255,0.08); }
+    .ep-body.open { display: block; }
+    .method { font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 0.25rem; letter-spacing: 0.05em; }
+    .method-get    { background: rgba(0,245,255,0.15); color: #00f5ff; }
+    .method-post   { background: rgba(0,255,136,0.15); color: #00ff88; }
+    .method-delete { background: rgba(255,0,60,0.15);  color: #ff003c; }
+    .method-patch  { background: rgba(255,230,0,0.15); color: #ffe600; }
+    .code-block {
+      background: #070713; border: 1px solid rgba(0,245,255,0.1);
+      border-radius: 0.5rem; padding: 0.75rem 1rem;
+      font-size: 0.75rem; line-height: 1.6; overflow-x: auto;
+      color: #9ca3af; margin-top: 0.5rem;
+    }
+    .code-block .kw  { color: #bf00ff; }
+    .code-block .str { color: #00ff88; }
+    .code-block .key { color: #00f5ff; }
+    .code-block .num { color: #ffe600; }
+    .try-btn {
+      font-size: 0.72rem; padding: 0.35rem 0.9rem; border-radius: 0.375rem;
+      border: 1px solid #00f5ff44; color: #00f5ff; background: rgba(0,245,255,0.05);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .try-btn:hover { background: #00f5ff; color: #070713; }
+    .response-box {
+      display: none; margin-top: 0.75rem; background: #070713;
+      border: 1px solid rgba(0,255,136,0.2); border-radius: 0.5rem;
+      padding: 0.75rem 1rem; font-size: 0.75rem; line-height: 1.6; color: #9ca3af;
+    }
+    .response-box.visible { display: block; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0 cyber-grid"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest shrink-0">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab active" aria-current="page">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="signup.html" class="hidden sm:block px-4 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all box-glow-cyan">Get API Key</a>
+        <button id="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false" class="md:hidden p-2 text-gray-400 hover:text-neon-cyan transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden border-t border-neon-cyan/10 bg-gray-950/95">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab active">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-1 animate-flash">● API Endpoints</p>
+      <h1 class="text-3xl font-bold text-gray-100">API <span class="text-neon-cyan glow-cyan">Reference</span></h1>
+      <p class="text-gray-500 text-xs mt-1">Interactive endpoint explorer. All requests require a valid QAPi key.</p>
+    </div>
+    <div class="flex gap-3">
+      <input id="api-key-input" type="password" placeholder="qapi-starter-…" class="neo-input max-w-xs" aria-label="API key for live requests" />
+      <button id="btn-set-key" class="btn-resolve glow-pulse-cyan">Set Key</button>
+    </div>
+  </div>
+
+  <!-- Base URL info -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-6">
+    <div class="neo-card p-4 flex flex-wrap items-center gap-4">
+      <span class="text-xs text-gray-500 uppercase tracking-widest">Base URL</span>
+      <code class="text-neon-cyan text-sm">https://qapi-omega.vercel.app</code>
+      <span class="text-xs text-gray-600">or your self-hosted instance</span>
+    </div>
+  </div>
+
+  <!-- Endpoint list -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-20 flex flex-col gap-4" aria-label="API endpoints" id="endpoint-list">
+    <!-- Injected by JS -->
+  </section>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-neon-cyan/10 py-6 px-6 text-center">
+    <p class="text-gray-600 text-xs">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+      const menu = document.getElementById('mobile-menu');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', String(!expanded));
+      menu.classList.toggle('open');
+    });
+
+    let apiKey = localStorage.getItem('qapi_key') || '';
+    const keyInput = document.getElementById('api-key-input');
+    if (apiKey) keyInput.value = apiKey;
+    document.getElementById('btn-set-key').addEventListener('click', () => {
+      apiKey = keyInput.value.trim();
+      localStorage.setItem('qapi_key', apiKey);
+      keyInput.type = 'text';
+      setTimeout(() => { keyInput.type = 'password'; }, 1500);
+    });
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    const ENDPOINTS = [
+      {
+        method: 'GET', path: '/api/resolve', auth: true, tier: 'starter',
+        summary: 'Resolve and stream a virtual module by its QAPi module ID.',
+        params: [
+          { name: 'module', required: true,  desc: 'QAPi module ID, e.g. <code class="text-neon-cyan">gh:&lt;owner&gt;/&lt;repo&gt;/&lt;40-char-sha&gt;/path/to/file.js</code>' },
+        ],
+        example: 'GET /api/resolve?module=gh:lodash/lodash/0123456789abcdef0123456789abcdef01234567/lodash.js\nAuthorization: Bearer qapi-starter-xxxxx',
+        sampleResp: '// Streamed JavaScript module\nexport function cloneDeep(value) { /* … */ }',
+      },
+      {
+        method: 'POST', path: '/auth/signup', auth: false, tier: 'starter',
+        summary: 'Register a new API key for the specified subscription tier.',
+        params: [
+          { name: 'tier',  required: true,  desc: 'One of: <code class="text-neon-cyan">starter</code>, <code class="text-neon-cyan">pro</code>, <code class="text-neon-cyan">audited</code>' },
+          { name: 'email', required: false, desc: 'Optional email for billing and notifications.' },
+        ],
+        example: 'POST /auth/signup\nContent-Type: application/json\n\n{ "tier": "starter" }',
+        sampleResp: '{ "key": "qapi-starter-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "tier": "starter" }',
+      },
+      {
+        method: 'GET', path: '/auth/me', auth: true, tier: 'starter',
+        summary: 'Return the tier and metadata for the authenticated API key.',
+        params: [],
+        example: 'GET /auth/me\nAuthorization: Bearer qapi-starter-xxxxx',
+        sampleResp: '{ "tier": "starter", "callsPerMinute": 100, "parallelBuilds": 1 }',
+      },
+      {
+        method: 'GET', path: '/v1/tiers', auth: false, tier: 'starter',
+        summary: 'List all available subscription tiers with pricing and feature bullets.',
+        params: [],
+        example: 'GET /v1/tiers',
+        sampleResp: '{ "tiers": [ { "id": "starter", "name": "Starter", "price": "Free", "callsPerMin": 100 }, … ] }',
+      },
+      {
+        method: 'GET', path: '/v1/tiers/:tierId', auth: false, tier: 'starter',
+        summary: 'Get details for a specific subscription tier.',
+        params: [
+          { name: 'tierId', required: true, desc: 'One of: <code class="text-neon-cyan">starter</code>, <code class="text-neon-cyan">pro</code>, <code class="text-neon-cyan">audited</code>' },
+        ],
+        example: 'GET /v1/tiers/pro',
+        sampleResp: '{ "id": "pro", "name": "Pro", "price": "$4/mo", "callsPerMin": 500, "maxParallelBuilds": 5, "features": […] }',
+      },
+      {
+        method: 'GET', path: '/metrics', auth: true, tier: 'pro',
+        summary: 'Return usage metrics for the authenticated key (Pro+ only).',
+        params: [],
+        example: 'GET /metrics\nAuthorization: Bearer qapi-pro-xxxxx',
+        sampleResp: '{ "callsToday": 1240, "cacheHitRate": 0.974, "resolveP99Ms": 42 }',
+      },
+    ];
+
+    const TIER_BADGE = { starter: 'tier-starter', pro: 'tier-pro', audited: 'tier-audited' };
+    const METHOD_CLASS = { GET: 'method-get', POST: 'method-post', DELETE: 'method-delete', PATCH: 'method-patch' };
+
+    const list = document.getElementById('endpoint-list');
+
+    ENDPOINTS.forEach((ep, i) => {
+      const id = `ep-${i}`;
+      list.insertAdjacentHTML('beforeend', `
+        <div class="endpoint-card" id="${id}-card">
+          <div class="ep-header" role="button" tabindex="0" aria-expanded="false" aria-controls="${id}-body" data-ep="${i}">
+            <div class="flex items-center gap-3">
+              <span class="method ${METHOD_CLASS[ep.method]}">${ep.method}</span>
+              <code class="text-gray-200 text-sm">${ep.path}</code>
+              ${ep.auth ? '<span class="text-xs text-gray-600">🔑 Auth</span>' : ''}
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="tier-badge ${TIER_BADGE[ep.tier]}">${ep.tier}</span>
+              <span class="text-gray-600 text-lg">›</span>
+            </div>
+          </div>
+          <div class="ep-body" id="${id}-body">
+            <p class="text-sm text-gray-400 mb-3">${ep.summary}</p>
+            ${ep.params.length ? `
+              <p class="text-xs text-gray-500 uppercase tracking-widest mb-2">Parameters</p>
+              <div class="flex flex-col gap-1.5 mb-3">
+                ${ep.params.map(p => `
+                  <div class="flex gap-3 text-xs">
+                    <code class="text-neon-cyan w-24 shrink-0">${p.name}${p.required ? '<span class="text-neon-red">*</span>' : ''}</code>
+                    <span class="text-gray-500">${p.desc}</span>
+                  </div>`).join('')}
+              </div>` : ''}
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-1">Example Request</p>
+            <pre class="code-block">${esc(ep.example)}</pre>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mb-1 mt-3">Sample Response</p>
+            <pre class="code-block">${esc(ep.sampleResp)}</pre>
+            <div class="mt-3 flex items-center gap-3">
+              <button class="try-btn" data-ep="${i}" aria-label="Try ${ep.method} ${ep.path}">▶ Try it</button>
+              <span class="text-xs text-gray-600" id="${id}-try-status"></span>
+            </div>
+            <pre class="response-box" id="${id}-response"></pre>
+          </div>
+        </div>`);
+
+      // Toggle expand
+      const header = document.querySelector(`#${id}-card .ep-header`);
+      header.addEventListener('click', () => toggleEp(i, id, header));
+      header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggleEp(i, id, header); });
+    });
+
+    function toggleEp(i, id, header) {
+      const body = document.getElementById(`${id}-body`);
+      const open = body.classList.toggle('open');
+      header.setAttribute('aria-expanded', String(open));
+      const arrow = header.querySelector('.text-lg');
+      if (arrow) arrow.textContent = open ? '⌄' : '›';
+    }
+
+    // Try-it buttons
+    document.querySelectorAll('.try-btn[data-ep]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const i     = parseInt(btn.dataset.ep);
+        const id    = `ep-${i}`;
+        const ep    = ENDPOINTS[i];
+        const status = document.getElementById(`${id}-try-status`);
+        const respEl = document.getElementById(`${id}-response`);
+
+        if (!apiKey && ep.auth) {
+          status.textContent = '⚠ Enter your API key above first.';
+          status.className   = 'text-xs text-neon-yellow';
+          return;
+        }
+
+        status.textContent = 'Sending…';
+        status.className   = 'text-xs text-gray-500';
+
+        try {
+          const baseUrl = 'https://qapi-omega.vercel.app';
+          const url = baseUrl + ep.path.replace('/:tierId', '/pro');
+          const headers = {};
+          if (ep.auth && apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+          const res = await fetch(url, { method: ep.method, headers });
+          const text = await res.text();
+          status.textContent = `${res.status} ${res.statusText}`;
+          status.className   = `text-xs ${res.ok ? 'text-neon-green' : 'text-neon-red'}`;
+          respEl.textContent = text.slice(0, 1000);
+          respEl.classList.add('visible');
+        } catch (err) {
+          status.textContent = 'Network error';
+          status.className   = 'text-xs text-neon-red';
+          respEl.textContent = String(err);
+          respEl.classList.add('visible');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

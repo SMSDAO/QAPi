@@ -13,7 +13,13 @@
     { "source": "/metrics",      "destination": "/apps/core/api/metrics" },
     { "source": "/v1/modules",   "destination": "/apps/core/api/v1-modules" },
     { "source": "/v1/tiers",         "destination": "/apps/core/api/v1-tiers" },
-    { "source": "/v1/tiers/:tierId", "destination": "/apps/core/api/v1-tiers" }
+    { "source": "/v1/tiers/:tierId", "destination": "/apps/core/api/v1-tiers" },
+    { "source": "/pricing",      "destination": "/pricing.html" },
+    { "source": "/health",       "destination": "/health.html" },
+    { "source": "/projects",     "destination": "/projects.html" },
+    { "source": "/dependencies", "destination": "/dependencies.html" },
+    { "source": "/addons",       "destination": "/addons.html" },
+    { "source": "/api-endpoints","destination": "/api.html" }
   ],
   "headers": [
     {

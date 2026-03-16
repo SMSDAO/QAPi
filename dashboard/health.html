@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Health &amp; Auditing — QAPi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: {
+            'flash': 'flash 1.4s ease-in-out infinite',
+            'spin-slow': 'spin 8s linear infinite',
+          },
+          keyframes: {
+            flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="neon-glow.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,245,255,0.02) 2px, rgba(0,245,255,0.02) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #mobile-menu { display: none; }
+    #mobile-menu.open { display: block; }
+    .sla-card {
+      background: rgba(13,13,26,0.85);
+      border: 1px solid rgba(0,245,255,0.15);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      transition: box-shadow 0.3s, border-color 0.3s;
+    }
+    .sla-card:hover {
+      border-color: rgba(0,245,255,0.35);
+      box-shadow: 0 0 20px #00f5ff22;
+    }
+    .gauge-svg { overflow: visible; }
+    .gauge-track { fill: none; stroke: rgba(0,245,255,0.1); stroke-width: 8; }
+    .gauge-fill  { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.5s ease-in-out; }
+    .log-row { font-size: 0.72rem; line-height: 1.5; border-bottom: 1px solid rgba(0,245,255,0.05); }
+    .log-row:last-child { border-bottom: none; }
+    .log-ok   { color: #00ff88; }
+    .log-warn { color: #ffe600; }
+    .log-err  { color: #ff003c; }
+    .log-info { color: #00f5ff; }
+    .audit-row { font-size: 0.78rem; display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(0,245,255,0.05); }
+    .audit-row:last-child { border-bottom: none; }
+    .sev-critical { color: #ff003c; border: 1px solid #ff003c44; padding: 0.1rem 0.5rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; }
+    .sev-high     { color: #ffe600; border: 1px solid #ffe60044; padding: 0.1rem 0.5rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; }
+    .sev-medium   { color: #00f5ff; border: 1px solid #00f5ff44; padding: 0.1rem 0.5rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; }
+    .sev-low      { color: #9ca3af; border: 1px solid #9ca3af44; padding: 0.1rem 0.5rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; }
+    .sev-info     { color: #00ff88; border: 1px solid #00ff8844; padding: 0.1rem 0.5rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 700; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+
+  <!-- Animated background grid -->
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0 cyber-grid"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest shrink-0">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab active" aria-current="page">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:flex items-center gap-1.5 text-xs text-neon-green"><span class="status-dot status-online"></span>All Systems Nominal</span>
+        <button id="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false" class="md:hidden p-2 text-gray-400 hover:text-neon-cyan transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden border-t border-neon-cyan/10 bg-gray-950/95">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab active">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page header -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-neon-green text-xs tracking-[0.3em] uppercase mb-1 animate-flash">● Health Monitoring &amp; Auditing</p>
+      <h1 class="text-3xl font-bold text-gray-100">System <span class="text-neon-cyan glow-cyan">Health</span></h1>
+      <p class="text-gray-500 text-xs mt-1">Real-time platform status · Automated security auditing · SLA tracking</p>
+    </div>
+    <div class="flex gap-3">
+      <button id="btn-audit-now" class="btn-audit glow-pulse-green" aria-label="Run security audit now">⚡ Audit Now</button>
+      <button id="btn-refresh" class="btn-resolve" aria-label="Refresh health data">↺ Refresh</button>
+    </div>
+  </div>
+
+  <!-- SLA Gauges -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-10" aria-label="SLA gauges">
+    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">SLA &amp; Uptime Gauges</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sla-grid">
+      <!-- Injected by JS -->
+    </div>
+  </section>
+
+  <!-- Service status + live log -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-10">
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <!-- Service status -->
+      <div class="neo-card p-5" aria-label="Service status">
+        <h2 class="text-sm font-bold text-neon-cyan glow-cyan uppercase tracking-widest mb-4">Service Status</h2>
+        <div class="flex flex-col gap-2" id="service-status-list">
+          <!-- Injected by JS -->
+        </div>
+      </div>
+
+      <!-- Live audit log -->
+      <div class="neo-card p-5" aria-label="Live audit log">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold text-neon-green glow-green uppercase tracking-widest">Live Audit Log</h2>
+          <span class="text-xs text-gray-600" id="log-timestamp">—</span>
+        </div>
+        <div id="audit-log" class="flex flex-col max-h-64 overflow-y-auto pr-1" role="log" aria-live="polite" aria-label="Audit log entries">
+          <!-- Injected by JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Security audit findings -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-16" aria-label="Security audit findings">
+    <div class="neo-card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="text-sm font-bold text-neon-purple glow-purple uppercase tracking-widest">Security Audit Findings</h2>
+        <div class="flex items-center gap-2">
+          <span id="audit-status" class="text-xs text-gray-600">Last run: —</span>
+          <span id="audit-running" class="hidden text-xs text-neon-yellow animate-flash">⚡ Running…</span>
+        </div>
+      </div>
+      <div id="audit-findings" class="flex flex-col">
+        <!-- Injected by JS -->
+      </div>
+      <div id="audit-empty" class="hidden text-center py-8 text-gray-600 text-sm">No findings — all clear ✔</div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-neon-cyan/10 py-6 px-6 text-center">
+    <p class="text-gray-600 text-xs">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
+  </footer>
+
+  <script>
+    // Mobile nav
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+      const menu = document.getElementById('mobile-menu');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', String(!expanded));
+      menu.classList.toggle('open');
+    });
+
+    // ── SLA gauge config (simulated) ────────────────────────────────────────
+    const SLA_GAUGES = [
+      { label: 'API Uptime',      value: 99.99, unit: '%',  color: '#00ff88', glow: '#00ff88' },
+      { label: 'Resolver P99',    value: 42,    unit: 'ms', color: '#00f5ff', glow: '#00f5ff' },
+      { label: 'Cache Hit Rate',  value: 97.4,  unit: '%',  color: '#bf00ff', glow: '#bf00ff' },
+      { label: 'Error Rate',      value: 0.01,  unit: '%',  color: '#ffe600', glow: '#ffe600' },
+    ];
+
+    function buildGauge(cfg) {
+      const R = 38;
+      const C = 2 * Math.PI * R;
+      // Normalize value to 0-100 for dash calc
+      let pct;
+      if (cfg.unit === 'ms') {
+        pct = Math.max(0, 100 - (cfg.value / 200) * 100);
+      } else if (cfg.label === 'Error Rate') {
+        pct = Math.max(0, 100 - cfg.value * 200);
+      } else {
+        pct = cfg.value;
+      }
+      const offset = C * (1 - pct / 100);
+      return `
+        <div class="sla-card">
+          <svg width="96" height="96" class="gauge-svg" viewBox="0 0 96 96" aria-hidden="true">
+            <circle class="gauge-track" cx="48" cy="48" r="${R}" />
+            <circle class="gauge-fill"
+              cx="48" cy="48" r="${R}"
+              stroke="${cfg.color}"
+              stroke-dasharray="${C}"
+              stroke-dashoffset="${offset}"
+              transform="rotate(-90 48 48)"
+              style="filter:drop-shadow(0 0 6px ${cfg.glow}88)"
+            />
+            <text x="48" y="44" text-anchor="middle" fill="${cfg.color}" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700">${cfg.value}</text>
+            <text x="48" y="58" text-anchor="middle" fill="#6b7280" font-family="JetBrains Mono,monospace" font-size="9">${cfg.unit}</text>
+          </svg>
+          <p class="text-xs text-gray-400 text-center font-bold">${cfg.label}</p>
+        </div>`;
+    }
+
+    const slaGrid = document.getElementById('sla-grid');
+    SLA_GAUGES.forEach(g => slaGrid.insertAdjacentHTML('beforeend', buildGauge(g)));
+
+    // ── Service status ───────────────────────────────────────────────────────
+    const SERVICES = [
+      { name: 'Module Resolver API',  status: 'online',  detail: 'v1 · Vercel Edge' },
+      { name: 'Auth Service',         status: 'online',  detail: 'JWT · 100% up' },
+      { name: 'Blob Store',           status: 'online',  detail: 'R2 · 99.99% SLA' },
+      { name: 'SDK Build Workers',    status: 'online',  detail: '5 parallel slots' },
+      { name: 'Claude AI Timeline',   status: 'online',  detail: 'Pro+ · Streaming' },
+      { name: 'Zero-Day Scanner',     status: 'online',  detail: 'Audited tier only' },
+      { name: 'GitHub Raw Proxy',     status: 'online',  detail: 'CDN-cached · SHA-pinned' },
+      { name: 'Dashboard CDN',        status: 'online',  detail: 'GitHub Pages + Vercel' },
+    ];
+
+    const statusList = document.getElementById('service-status-list');
+    SERVICES.forEach(s => {
+      statusList.insertAdjacentHTML('beforeend', `
+        <div class="flex items-center justify-between py-2 border-b border-gray-800/40 last:border-0">
+          <div class="flex items-center gap-2">
+            <span class="status-dot status-${s.status}"></span>
+            <span class="text-xs text-gray-300">${s.name}</span>
+          </div>
+          <span class="text-xs text-gray-600">${s.detail}</span>
+        </div>`);
+    });
+
+    // ── Audit log (simulated) ────────────────────────────────────────────────
+    const LOG_ENTRIES = [
+      { ts: '02:58:41', level: 'ok',   msg: 'GET /api/resolve → 200 · 38ms · qapi-pro-***1a2b' },
+      { ts: '02:58:39', level: 'ok',   msg: 'GET /api/resolve → 304 · 2ms  · qapi-starter-***9x7y (cached)' },
+      { ts: '02:58:37', level: 'info', msg: 'Audit token qapi-audited-***c3d4 · tier=audited logged' },
+      { ts: '02:58:35', level: 'ok',   msg: 'GET /v1/tiers → 200 · 12ms' },
+      { ts: '02:58:30', level: 'warn', msg: 'Rate limit approaching · qapi-starter-***0000 · 91/100 rpm' },
+      { ts: '02:58:25', level: 'ok',   msg: 'POST /auth/signup → 201 · new key issued · tier=starter' },
+      { ts: '02:58:20', level: 'ok',   msg: 'GET /api/resolve → 200 · 41ms · gh:abc1234…/lodash/index.js' },
+      { ts: '02:58:15', level: 'info', msg: 'Zero-day scan completed · 0 CVEs · audited-tier project' },
+      { ts: '02:58:10', level: 'ok',   msg: 'GET /metrics → 200 · 8ms' },
+      { ts: '02:58:05', level: 'ok',   msg: 'SDK build job finished · 3 modules streamed · 1.2s total' },
+    ];
+
+    function renderLog() {
+      const logEl = document.getElementById('audit-log');
+      document.getElementById('log-timestamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      const colorMap = { ok: 'log-ok', warn: 'log-warn', err: 'log-err', info: 'log-info' };
+      logEl.innerHTML = LOG_ENTRIES.map(e => `
+        <div class="log-row py-1 ${colorMap[e.level] || ''}">
+          <span class="text-gray-600 mr-2">${e.ts}</span>${e.msg}
+        </div>`).join('');
+    }
+    renderLog();
+
+    // ── Security audit findings (simulated) ──────────────────────────────────
+    const FINDINGS = [
+      { id: 'CVE-2024-0001', pkg: 'express',   ver: '4.18.2', sev: 'low',    desc: 'Minor prototype pollution · not exploitable in current usage' },
+      { id: 'QAPI-SEC-042',  pkg: 'sdk-loader',ver: '1.0.0',  sev: 'info',   desc: 'SHA-only enforcement active · branch refs blocked ✔' },
+      { id: 'QAPI-SEC-039',  pkg: 'cors',      ver: '2.8.5',  sev: 'info',   desc: 'Origin allowlist validated · no wildcard CORS ✔' },
+    ];
+
+    const findingsEl = document.getElementById('audit-findings');
+    const emptyEl    = document.getElementById('audit-empty');
+    const sevClass   = { critical: 'sev-critical', high: 'sev-high', medium: 'sev-medium', low: 'sev-low', info: 'sev-info' };
+
+    function renderFindings(items) {
+      if (!items.length) {
+        findingsEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+      findingsEl.classList.remove('hidden');
+      emptyEl.classList.add('hidden');
+      findingsEl.innerHTML = items.map(f => `
+        <div class="audit-row">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-xs text-gray-200 font-bold">${f.pkg} <span class="text-gray-600 font-normal">@${f.ver}</span></span>
+            <span class="text-xs text-gray-500">${f.desc}</span>
+          </div>
+          <div class="flex items-center gap-3 shrink-0 ml-4">
+            <span class="text-xs text-gray-600">${f.id}</span>
+            <span class="${sevClass[f.sev] || 'sev-info'}">${f.sev.toUpperCase()}</span>
+          </div>
+        </div>`).join('');
+    }
+    renderFindings(FINDINGS);
+
+    const auditStatusEl  = document.getElementById('audit-status');
+    const auditRunningEl = document.getElementById('audit-running');
+    auditStatusEl.textContent = 'Last run: ' + new Date().toLocaleTimeString();
+
+    // Audit Now button
+    document.getElementById('btn-audit-now').addEventListener('click', function () {
+      this.disabled = true;
+      auditRunningEl.classList.remove('hidden');
+      auditStatusEl.classList.add('hidden');
+      setTimeout(() => {
+        auditRunningEl.classList.add('hidden');
+        auditStatusEl.classList.remove('hidden');
+        auditStatusEl.textContent = 'Last run: ' + new Date().toLocaleTimeString();
+        // Simulate a fresh scan
+        renderFindings(FINDINGS);
+        this.disabled = false;
+      }, 2200);
+    });
+
+    // Refresh button
+    document.getElementById('btn-refresh').addEventListener('click', renderLog);
+
+    // Auto-refresh log every 30s
+    setInterval(renderLog, 30000);
+  </script>
+</body>
+</html>

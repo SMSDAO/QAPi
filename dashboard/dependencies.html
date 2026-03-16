@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dependencies — QAPi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: { 'flash': 'flash 1.4s ease-in-out infinite' },
+          keyframes: { flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="neon-glow.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px); pointer-events:none; z-index:9999; }
+    #mobile-menu { display: none; }
+    #mobile-menu.open { display: block; }
+    .dep-row {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid rgba(0,245,255,0.06);
+      transition: background 0.2s;
+    }
+    .dep-row:last-child { border-bottom: none; }
+    .dep-row:hover { background: rgba(0,245,255,0.025); }
+    .cve-badge { font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 9999px; font-weight: 700; }
+    .cve-none   { color: #00ff88; border: 1px solid #00ff8844; }
+    .cve-low    { color: #9ca3af; border: 1px solid #9ca3af44; }
+    .cve-medium { color: #00f5ff; border: 1px solid #00f5ff44; }
+    .cve-high   { color: #ffe600; border: 1px solid #ffe60044; }
+    .cve-critical{ color: #ff003c; border: 1px solid #ff003c44; }
+    .stream-bar {
+      height: 4px; border-radius: 2px;
+      background: linear-gradient(90deg, #00f5ff, #bf00ff);
+      box-shadow: 0 0 8px #00f5ff66;
+      transition: width 0.8s ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0 cyber-grid"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest shrink-0">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab active" aria-current="page">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="signup.html" class="hidden sm:block px-4 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all box-glow-cyan">Get API Key</a>
+        <button id="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false" class="md:hidden p-2 text-gray-400 hover:text-neon-cyan transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden border-t border-neon-cyan/10 bg-gray-950/95">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab active">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-1 animate-flash">● Dependencies</p>
+      <h1 class="text-3xl font-bold text-gray-100">Dependency <span class="text-neon-cyan glow-cyan">Stream</span></h1>
+      <p class="text-gray-500 text-xs mt-1">All modules resolved through the QAPi virtual resolver. No node_modules installs.</p>
+    </div>
+    <div class="flex gap-3">
+      <button id="btn-audit-deps" class="btn-audit glow-pulse-green">⚡ Audit Now</button>
+      <button id="btn-stream-all" class="btn-resolve glow-pulse-cyan">⚡ Resolve Module</button>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="dep-stats">
+      <div class="neo-card p-4 text-center"><p id="stat-total" class="text-2xl font-bold text-neon-cyan glow-cyan">—</p><p class="text-xs text-gray-500 mt-1">Total Deps</p></div>
+      <div class="neo-card p-4 text-center"><p id="stat-streamed" class="text-2xl font-bold text-neon-green glow-green">—</p><p class="text-xs text-gray-500 mt-1">Streamed</p></div>
+      <div class="neo-card p-4 text-center"><p id="stat-cached" class="text-2xl font-bold text-neon-purple glow-purple">—</p><p class="text-xs text-gray-500 mt-1">Cached</p></div>
+      <div class="neo-card p-4 text-center"><p id="stat-cves" class="text-2xl font-bold text-neon-yellow">—</p><p class="text-xs text-gray-500 mt-1">CVEs Found</p></div>
+    </div>
+  </div>
+
+  <!-- Search + filter -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-4 flex flex-wrap gap-3 items-center">
+    <input id="dep-search" type="text" placeholder="Search dependency…" class="neo-input max-w-xs" aria-label="Search dependencies" />
+    <select id="dep-filter-cve" class="neo-input max-w-[160px]" aria-label="Filter by CVE severity">
+      <option value="">All CVE levels</option>
+      <option value="none">Clean</option>
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+      <option value="critical">Critical</option>
+    </select>
+  </div>
+
+  <!-- Dependency table -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-20" aria-label="Dependency list">
+    <div class="neo-card overflow-hidden">
+      <div class="px-4 py-3 border-b border-neon-cyan/10 flex items-center justify-between">
+        <span class="text-xs text-gray-500 uppercase tracking-widest">Module</span>
+        <div class="flex gap-8 text-xs text-gray-500 uppercase tracking-widest">
+          <span class="hidden sm:block">Version</span>
+          <span>Stream</span>
+          <span>CVE</span>
+          <span class="hidden md:block">Tier</span>
+        </div>
+      </div>
+      <div id="dep-list" role="list" aria-label="Dependencies"><!-- Injected --></div>
+      <p id="dep-empty" class="hidden text-center py-10 text-gray-600 text-sm">No dependencies match your search.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-neon-cyan/10 py-6 px-6 text-center">
+    <p class="text-gray-600 text-xs">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+      const menu = document.getElementById('mobile-menu');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', String(!expanded));
+      menu.classList.toggle('open');
+    });
+
+    const DEPS = [
+      { name: 'express',              version: '4.18.2', stream: 98,  cve: 'low',    tier: 'starter' },
+      { name: 'cors',                 version: '2.8.5',  stream: 100, cve: 'none',   tier: 'starter' },
+      { name: 'uuid',                 version: '9.0.1',  stream: 100, cve: 'none',   tier: 'starter' },
+      { name: 'express-rate-limit',   version: '7.1.5',  stream: 100, cve: 'none',   tier: 'starter' },
+      { name: 'esbuild',              version: '0.27.3', stream: 95,  cve: 'none',   tier: 'pro' },
+      { name: 'typescript',           version: '5.7.3',  stream: 97,  cve: 'none',   tier: 'pro' },
+      { name: '@types/node',          version: '22.0.0', stream: 100, cve: 'none',   tier: 'pro' },
+      { name: 'lodash',               version: '4.17.21',stream: 88,  cve: 'medium', tier: 'starter' },
+      { name: 'semver',               version: '7.6.0',  stream: 100, cve: 'none',   tier: 'starter' },
+      { name: 'node-fetch',           version: '3.3.2',  stream: 94,  cve: 'none',   tier: 'pro' },
+      { name: '@anthropic-ai/sdk',    version: '0.24.3', stream: 91,  cve: 'none',   tier: 'audited' },
+      { name: 'zod',                  version: '3.22.4', stream: 100, cve: 'none',   tier: 'pro' },
+    ];
+
+    const TIER_LABELS = { starter: 'tier-starter', pro: 'tier-pro', audited: 'tier-audited' };
+
+    function renderDeps(list) {
+      const el    = document.getElementById('dep-list');
+      const empty = document.getElementById('dep-empty');
+      if (!list.length) { el.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      el.innerHTML = list.map(d => `
+        <div class="dep-row" role="listitem">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="text-neon-cyan text-sm font-bold truncate">${d.name}</span>
+            <span class="text-gray-600 text-xs hidden sm:block">${d.version}</span>
+          </div>
+          <div class="flex items-center gap-6 shrink-0">
+            <div class="flex flex-col gap-1 w-20">
+              <div class="stream-bar" style="width:${d.stream}%"></div>
+              <span class="text-xs text-gray-600">${d.stream}%</span>
+            </div>
+            <span class="cve-badge cve-${d.cve}">${d.cve === 'none' ? 'CLEAN' : d.cve.toUpperCase()}</span>
+            <span class="tier-badge ${TIER_LABELS[d.tier]} hidden md:inline-flex">${d.tier}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    function updateStats(list) {
+      document.getElementById('stat-total').textContent   = list.length;
+      document.getElementById('stat-streamed').textContent = list.filter(d => d.stream === 100).length;
+      document.getElementById('stat-cached').textContent   = list.filter(d => d.stream >= 90).length;
+      document.getElementById('stat-cves').textContent     = list.filter(d => d.cve !== 'none').length;
+    }
+
+    function applyFilters() {
+      const q   = document.getElementById('dep-search').value.toLowerCase();
+      const cve = document.getElementById('dep-filter-cve').value;
+      const filtered = DEPS.filter(d =>
+        (!q   || d.name.includes(q) || d.version.includes(q)) &&
+        (!cve || d.cve === cve)
+      );
+      renderDeps(filtered);
+      updateStats(filtered);
+    }
+
+    document.getElementById('dep-search').addEventListener('input', applyFilters);
+    document.getElementById('dep-filter-cve').addEventListener('change', applyFilters);
+
+    document.getElementById('btn-audit-deps').addEventListener('click', () => {
+      window.location.href = 'health.html';
+    });
+    document.getElementById('btn-stream-all').addEventListener('click', () => {
+      window.location.href = 'developer.html';
+    });
+
+    applyFilters();
+  </script>
+</body>
+</html>
