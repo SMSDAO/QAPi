@@ -294,12 +294,35 @@
         status.className   = 'text-xs text-gray-500';
 
         try {
-          const baseUrl = 'https://qapi-omega.vercel.app';
-          const url = baseUrl + ep.path.replace('/:tierId', '/pro');
+          // Use the current origin so local/dev instances work out of the box;
+          // fall back to the production Vercel URL when hosted on a different domain.
+          const origin = window.location.origin.startsWith('file')
+            ? 'https://qapi-omega.vercel.app'
+            : window.location.origin;
+          let url = origin + ep.path.replace('/:tierId', '/pro');
           const headers = {};
+          let body;
+
           if (ep.auth && apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-          const res = await fetch(url, { method: ep.method, headers });
+          if (ep.method === 'GET') {
+            // Append any required query params extracted from the example line
+            const exampleLine = ep.example.split('\n')[0];
+            const qsMatch = exampleLine.match(/\?(.+)$/);
+            if (qsMatch) url += '?' + qsMatch[1];
+          } else if (ep.method === 'POST') {
+            // Extract JSON body from the example block (after the blank line)
+            const bodyMatch = ep.example.match(/\n\n(\{[\s\S]+\})/);
+            if (bodyMatch) {
+              body = bodyMatch[1].trim();
+              headers['Content-Type'] = 'application/json';
+            }
+          }
+
+          const fetchOpts = { method: ep.method, headers };
+          if (body) fetchOpts.body = body;
+
+          const res = await fetch(url, fetchOpts);
           const text = await res.text();
           status.textContent = `${res.status} ${res.statusText}`;
           status.className   = `text-xs ${res.ok ? 'text-neon-green' : 'text-neon-red'}`;

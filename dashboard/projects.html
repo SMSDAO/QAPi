@@ -235,7 +235,7 @@
       const team = document.getElementById('filter-team').value;
       const stat = document.getElementById('filter-status').value;
       renderProjects(PROJECTS.filter(p =>
-        (!q    || p.name.includes(q) || p.desc.toLowerCase().includes(q)) &&
+        (!q    || p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q)) &&
         (!team || p.team === team) &&
         (!stat || p.status === stat)
       ));
