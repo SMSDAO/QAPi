@@ -206,7 +206,7 @@
       const q   = document.getElementById('dep-search').value.toLowerCase();
       const cve = document.getElementById('dep-filter-cve').value;
       const filtered = DEPS.filter(d =>
-        (!q   || d.name.includes(q) || d.version.includes(q)) &&
+        (!q   || d.name.toLowerCase().includes(q) || d.version.toLowerCase().includes(q)) &&
         (!cve || d.cve === cve)
       );
       renderDeps(filtered);

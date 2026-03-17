@@ -205,7 +205,7 @@
       grid.querySelectorAll('.project-card').forEach(card => {
         const openDetail = () => openProject(card.dataset.id);
         card.addEventListener('click', openDetail);
-        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openDetail(); });
+        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } });
       });
     }
 

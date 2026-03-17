@@ -151,12 +151,12 @@
       menu.classList.toggle('open');
     });
 
-    let apiKey = localStorage.getItem('qapi_key') || '';
+    let apiKey = sessionStorage.getItem('qapi_key') || '';
     const keyInput = document.getElementById('api-key-input');
     if (apiKey) keyInput.value = apiKey;
     document.getElementById('btn-set-key').addEventListener('click', () => {
       apiKey = keyInput.value.trim();
-      localStorage.setItem('qapi_key', apiKey);
+      sessionStorage.setItem('qapi_key', apiKey);
       keyInput.type = 'text';
       setTimeout(() => { keyInput.type = 'password'; }, 1500);
     });
@@ -263,7 +263,7 @@
       // Toggle expand
       const header = document.querySelector(`#${id}-card .ep-header`);
       header.addEventListener('click', () => toggleEp(i, id, header));
-      header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggleEp(i, id, header); });
+      header.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleEp(i, id, header); } });
     });
 
     function toggleEp(i, id, header) {
@@ -295,10 +295,12 @@
 
         try {
           // Use the current origin so local/dev instances work out of the box;
-          // fall back to the production Vercel URL when hosted on a different domain.
-          const origin = window.location.origin.startsWith('file')
+          // fall back to the production Vercel URL for file:// access or when
+          // window.location.origin is the string "null" (common on file: protocol).
+          const rawOrigin = window.location.origin;
+          const origin = (window.location.protocol === 'file:' || rawOrigin === 'null')
             ? 'https://qapi-omega.vercel.app'
-            : window.location.origin;
+            : rawOrigin;
           let url = origin + ep.path.replace('/:tierId', '/pro');
           const headers = {};
           let body;
