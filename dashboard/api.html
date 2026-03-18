@@ -128,7 +128,7 @@
   <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-6">
     <div class="neo-card p-4 flex flex-wrap items-center gap-4">
       <span class="text-xs text-gray-500 uppercase tracking-widest">Base URL</span>
-      <code class="text-neon-cyan text-sm">https://qapi-omega.vercel.app</code>
+      <code class="text-neon-cyan text-sm" id="base-url-display"></code>
       <span class="text-xs text-gray-600">or your self-hosted instance</span>
     </div>
   </div>
@@ -160,6 +160,12 @@
       keyInput.type = 'text';
       setTimeout(() => { keyInput.type = 'password'; }, 1500);
     });
+
+    // Display the effective base URL used by Try-it (mirrors origin-selection logic below)
+    const _displayOrigin = (window.location.protocol === 'file:' || window.location.origin === 'null')
+      ? 'https://qapi-omega.vercel.app'
+      : window.location.origin;
+    document.getElementById('base-url-display').textContent = _displayOrigin;
 
     function esc(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

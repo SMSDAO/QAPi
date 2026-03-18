@@ -315,11 +315,16 @@
 
     // Stripe checkout redirect (replace with real Stripe price IDs)
     document.getElementById('stripe-checkout-pro').addEventListener('click', function(e) {
-      const key = localStorage.getItem('qapi_key');
+      const key = sessionStorage.getItem('qapi_key') || localStorage.getItem('qapi_key');
       if (!key) return; // let default href handle it (signup)
       e.preventDefault();
-      // In production: redirect to your /api/create-checkout-session endpoint
-      // window.location.href = `/api/create-checkout-session?tier=pro&key=${encodeURIComponent(key)}`;
+      // In production: POST to your server-side /api/create-checkout-session endpoint,
+      // passing the API key via Authorization header (never in the URL).
+      // fetch('/api/create-checkout-session', {
+      //   method: 'POST',
+      //   headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ tier: 'pro' })
+      // }).then(r => r.json()).then(d => { window.location.href = d.url; });
       alert('Stripe checkout would open here. Configure your Stripe Price ID in the API to enable live payments.');
     });
   </script>
