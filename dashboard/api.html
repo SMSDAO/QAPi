@@ -161,9 +161,9 @@
       setTimeout(() => { keyInput.type = 'password'; }, 1500);
     });
 
-    // Display the effective base URL used by Try-it (mirrors origin-selection logic below)
+    // Display the effective base URL used by Try-it
     const _displayOrigin = (window.location.protocol === 'file:' || window.location.origin === 'null')
-      ? 'https://qapi-omega.vercel.app'
+      ? '(serve over HTTP/HTTPS to use Try it)'
       : window.location.origin;
     document.getElementById('base-url-display').textContent = _displayOrigin;
 
@@ -300,13 +300,15 @@
         status.className   = 'text-xs text-gray-500';
 
         try {
-          // Use the current origin so local/dev instances work out of the box;
-          // fall back to the production Vercel URL for file:// access or when
-          // window.location.origin is the string "null" (common on file: protocol).
+          // Refuse to make requests when opened as a local file to prevent
+          // inadvertently sending API keys to a hard-coded cross-origin host.
           const rawOrigin = window.location.origin;
-          const origin = (window.location.protocol === 'file:' || rawOrigin === 'null')
-            ? 'https://qapi-omega.vercel.app'
-            : rawOrigin;
+          if (window.location.protocol === 'file:' || rawOrigin === 'null') {
+            status.textContent = 'Open this page over HTTP/HTTPS (not file://) to use Try it.';
+            status.className   = 'text-xs text-neon-yellow';
+            return;
+          }
+          const origin = rawOrigin;
           let url = origin + ep.path.replace('/:tierId', '/pro');
           const headers = {};
           let body;
