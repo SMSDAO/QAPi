@@ -59,7 +59,7 @@ function requestLogger(req, res, next) {
       latencyMs,
       tier: req.qapiTier || null,
       keyId: req.qapiKey ? req.qapiKey.id.slice(0, 8) : null,
-      module: req.query?.name || req.params?.id || null,
+      module: req.query?.module || req.query?.name || req.params?.id || null,
       ip: req.ip || req.socket?.remoteAddress || null,
     };
     // The ring buffer (fed to the public /metrics/logs endpoint) omits ip and

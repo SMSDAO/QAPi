@@ -46,14 +46,21 @@ export default async function handler(req: Request): Promise<Response> {
   const gh = parseGhModuleId(moduleId);
   const bl = parseBlobModuleId(moduleId);
 
-  const upstream =
-    gh ? ghRawUrl(gh.owner, gh.repo, gh.sha, gh.filePath)
-    : bl ? blobUrl(bl.path)
-    : null;
-
-  if (!upstream) {
+  if (!gh && !bl) {
     return new Response("Invalid module id. Use gh:OWNER/REPO@<40-hex-sha>:PATH or blob:PATH", {
       status: 400,
+      headers: corsHeaders(req)
+    });
+  }
+
+  const upstream = gh
+    ? ghRawUrl(gh.owner, gh.repo, gh.sha, gh.filePath)
+    : blobUrl(bl!.path);
+
+  if (!upstream) {
+    // bl was valid but QAPI_BLOB_BASE_URL is not configured on this deployment.
+    return new Response("Blob storage is not configured (QAPI_BLOB_BASE_URL is not set).", {
+      status: 503,
       headers: corsHeaders(req)
     });
   }

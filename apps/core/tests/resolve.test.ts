@@ -275,14 +275,14 @@ describe("Upstream proxying (gh: module)", () => {
 
 // ── Blob module ───────────────────────────────────────────────────────────
 describe("Blob module", () => {
-  test("blob module with no QAPI_BLOB_BASE_URL returns 400", async () => {
+  test("blob module with no QAPI_BLOB_BASE_URL returns 503", async () => {
     const moduleId = "blob:some/module.js";
     const req = makeRequest(
       `https://qapi.vercel.app/api/resolve?module=${encodeURIComponent(moduleId)}`,
       { headers: { authorization: "Bearer qapi-starter-demo" } }
     );
     const res = await handler(req);
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 503);
   });
 
   test("blob module with QAPI_BLOB_BASE_URL set is proxied", async () => {
