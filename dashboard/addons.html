@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add-ons — QAPi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: { 'flash': 'flash 1.4s ease-in-out infinite' },
+          keyframes: { flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="neon-glow.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px); pointer-events:none; z-index:9999; }
+    #mobile-menu { display: none; }
+    #mobile-menu.open { display: block; }
+    .addon-card {
+      background: rgba(13,13,26,0.85);
+      border: 1px solid rgba(75,85,99,0.3);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .addon-card:hover { border-color: rgba(0,245,255,0.3); box-shadow: 0 0 16px #00f5ff11; }
+    .addon-card.enabled { border-color: rgba(0,255,136,0.35); }
+    .toggle-btn {
+      position: relative; width: 40px; height: 22px;
+      border-radius: 11px; border: none; cursor: pointer;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .toggle-btn::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; transition: transform 0.3s;
+    }
+    .toggle-btn.on { background: #00ff88; }
+    .toggle-btn.on::after { transform: translateX(18px); }
+    .toggle-btn.off { background: #374151; }
+    .req-badge {
+      font-size: 0.65rem; padding: 0.1rem 0.5rem; border-radius: 9999px;
+      font-weight: 700; letter-spacing: 0.05em;
+    }
+    .req-pro     { background: rgba(0,245,255,0.1);   color: #00f5ff; border: 1px solid #00f5ff33; }
+    .req-audited { background: rgba(191,0,255,0.1);   color: #bf00ff; border: 1px solid #bf00ff33; }
+    .req-free    { background: rgba(0,255,136,0.1);   color: #00ff88; border: 1px solid #00ff8833; }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0 cyber-grid"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest shrink-0">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab active" aria-current="page">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="signup.html" class="hidden sm:block px-4 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all box-glow-cyan">Get API Key</a>
+        <button id="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false" class="md:hidden p-2 text-gray-400 hover:text-neon-cyan transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden border-t border-neon-cyan/10 bg-gray-950/95">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab active">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-1 animate-flash">● Add-ons &amp; Integrations</p>
+      <h1 class="text-3xl font-bold text-gray-100">Platform <span class="text-neon-cyan glow-cyan">Add-ons</span></h1>
+      <p class="text-gray-500 text-xs mt-1">Enable or disable platform extensions. Some add-ons require a Pro or Audited subscription.</p>
+    </div>
+    <div class="flex gap-3">
+      <a href="health.html" class="btn-audit glow-pulse-green">⚡ Audit Now</a>
+      <a href="developer.html" class="btn-resolve glow-pulse-cyan">⚡ Resolve Module</a>
+    </div>
+  </div>
+
+  <!-- Add-ons grid -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-20" aria-label="Add-ons">
+    <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5" id="addon-grid">
+      <!-- Injected by JS -->
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-neon-cyan/10 py-6 px-6 text-center">
+    <p class="text-gray-600 text-xs">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+      const menu = document.getElementById('mobile-menu');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', String(!expanded));
+      menu.classList.toggle('open');
+    });
+
+    const ADDONS = [
+      { id: 'claude-timeline',  icon: '🤖', name: 'Claude AI Timeline',       req: 'pro',     enabled: true,  desc: 'Anthropic Claude-powered code analysis and dependency timeline insights.' },
+      { id: 'zero-day-scanner', icon: '🛡',  name: 'Zero-Day CVE Scanner',     req: 'audited', enabled: false, desc: 'Real-time CVE scanning for every resolved module. Audited tier only.' },
+      { id: 'dedicated-cache',  icon: '⚡',  name: 'Dedicated Response Cache', req: 'pro',     enabled: true,  desc: 'Per-key isolated cache for sub-5ms repeated module resolutions.' },
+      { id: 'vercel-deploy',    icon: '▲',  name: 'Vercel Auto-Deploy',       req: 'free',    enabled: true,  desc: 'One-click deployment of your QAPi dashboard to Vercel via GitHub Actions.' },
+      { id: 'blob-store',       icon: '📦', name: 'Blob / VPS Module Store',   req: 'pro',     enabled: false, desc: 'Host private modules on your own VPS and resolve them via blob: URIs.' },
+      { id: 'parallel-builds',  icon: '🔀', name: 'Parallel Build Workers',   req: 'pro',     enabled: true,  desc: 'Run up to 5 concurrent SDK build jobs for faster CI pipelines.' },
+      { id: 'audit-reports',    icon: '📋', name: 'Security Audit Reports',   req: 'audited', enabled: false, desc: 'Exportable PDF security audit reports for compliance and SOC 2.' },
+      { id: 'stripe-billing',   icon: '💳', name: 'Stripe Billing Portal',    req: 'free',    enabled: true,  desc: 'Manage your subscription, invoices, and payment method via Stripe.' },
+      { id: 'pwa-offline',      icon: '📱', name: 'PWA Offline Mode',         req: 'free',    enabled: true,  desc: 'Service-worker cached dashboard with offline fallback support.' },
+    ];
+
+    const REQ_CLASS = { free: 'req-free', pro: 'req-pro', audited: 'req-audited' };
+    const REQ_LABEL = { free: 'Free', pro: 'Pro', audited: 'Audited' };
+
+    const state = Object.fromEntries(ADDONS.map(a => [a.id, a.enabled]));
+
+    function renderAddons() {
+      document.getElementById('addon-grid').innerHTML = ADDONS.map(a => `
+        <div class="addon-card${state[a.id] ? ' enabled' : ''}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl" aria-hidden="true">${a.icon}</span>
+              <div>
+                <p class="font-bold text-gray-100 text-sm">${a.name}</p>
+                <span class="req-badge ${REQ_CLASS[a.req]}">${REQ_LABEL[a.req]}</span>
+              </div>
+            </div>
+            <button
+              class="toggle-btn ${state[a.id] ? 'on' : 'off'}"
+              data-id="${a.id}"
+              role="switch"
+              aria-checked="${state[a.id]}"
+              aria-label="${state[a.id] ? 'Disable' : 'Enable'} ${a.name}"
+            ></button>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">${a.desc}</p>
+          <p class="text-xs ${state[a.id] ? 'text-neon-green' : 'text-gray-600'}">${state[a.id] ? '● Enabled' : '○ Disabled'}</p>
+        </div>`).join('');
+
+      document.querySelectorAll('.toggle-btn[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const addon = ADDONS.find(a => a.id === id);
+          if (!addon) return;
+          if (!state[id] && (addon.req === 'pro' || addon.req === 'audited')) {
+            const tier = addon.req;
+            if (!confirm(`This add-on requires the ${tier.charAt(0).toUpperCase() + tier.slice(1)} tier. Upgrade now?`)) return;
+            window.location.href = 'pricing.html';
+            return;
+          }
+          state[id] = !state[id];
+          renderAddons();
+        });
+      });
+    }
+
+    renderAddons();
+  </script>
+</body>
+</html>

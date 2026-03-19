@@ -1,0 +1,212 @@
+/*
+ * dashboard/neon-glow.css
+ * NEO FLASH GLOW UI/UX — shared neon/cyber design tokens for QAPi dashboard
+ *
+ * Consumed by all dashboard HTML pages via:
+ *   <link rel="stylesheet" href="neon-glow.css" />
+ */
+
+/* ── Animated background grid ── */
+.cyber-grid {
+  background-image:
+    linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Text glow utilities ── */
+.glow-cyan   { text-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff, 0 0 40px #00f5ff66; }
+.glow-purple { text-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff, 0 0 40px #bf00ff66; }
+.glow-green  { text-shadow: 0 0 8px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff8866; }
+.glow-yellow { text-shadow: 0 0 8px #ffe600, 0 0 20px #ffe600, 0 0 40px #ffe60066; }
+.glow-red    { text-shadow: 0 0 8px #ff003c, 0 0 20px #ff003c, 0 0 40px #ff003c66; }
+
+/* ── Box / border glow utilities ── */
+.box-glow-cyan   { box-shadow: 0 0 12px #00f5ff44, 0 0 24px #00f5ff22, inset 0 0 12px #00f5ff11; }
+.box-glow-purple { box-shadow: 0 0 12px #bf00ff44, 0 0 24px #bf00ff22, inset 0 0 12px #bf00ff11; }
+.box-glow-green  { box-shadow: 0 0 12px #00ff8844, 0 0 24px #00ff8822, inset 0 0 12px #00ff8811; }
+.box-glow-yellow { box-shadow: 0 0 12px #ffe60044, 0 0 24px #ffe60022, inset 0 0 12px #ffe60011; }
+.box-glow-red    { box-shadow: 0 0 12px #ff003c44, 0 0 24px #ff003c22, inset 0 0 12px #ff003c11; }
+
+/* ── Intense flash-pulse glow — for action buttons (Resolve, Deploy, Audit) ── */
+.glow-pulse-cyan {
+  box-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff88, 0 0 40px #00f5ff44;
+  animation: flash-pulse-cyan 1.6s ease-in-out infinite;
+}
+.glow-pulse-purple {
+  box-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff88, 0 0 40px #bf00ff44;
+  animation: flash-pulse-purple 1.6s ease-in-out infinite;
+}
+.glow-pulse-green {
+  box-shadow: 0 0 8px #00ff88, 0 0 20px #00ff8888, 0 0 40px #00ff8844;
+  animation: flash-pulse-green 1.6s ease-in-out infinite;
+}
+
+@keyframes flash-pulse-cyan {
+  0%, 100% { box-shadow: 0 0 8px #00f5ff, 0 0 20px #00f5ff88, 0 0 40px #00f5ff44; }
+  50%       { box-shadow: 0 0 16px #00f5ff, 0 0 40px #00f5ffcc, 0 0 80px #00f5ff88; }
+}
+@keyframes flash-pulse-purple {
+  0%, 100% { box-shadow: 0 0 8px #bf00ff, 0 0 20px #bf00ff88, 0 0 40px #bf00ff44; }
+  50%       { box-shadow: 0 0 16px #bf00ff, 0 0 40px #bf00ffcc, 0 0 80px #bf00ff88; }
+}
+@keyframes flash-pulse-green {
+  0%, 100% { box-shadow: 0 0 8px #00ff88, 0 0 20px #00ff8888, 0 0 40px #00ff8844; }
+  50%       { box-shadow: 0 0 16px #00ff88, 0 0 40px #00ff88cc, 0 0 80px #00ff8888; }
+}
+
+/* ── Text flash animation ── */
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+.animate-flash { animation: flash 1.4s ease-in-out infinite; }
+
+/* ── Nav tab styles ── */
+.nav-tab {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  color: #9ca3af;
+  text-decoration: none;
+  display: inline-block;
+}
+.nav-tab:hover {
+  color: #00f5ff;
+  background: rgba(0, 245, 255, 0.06);
+}
+.nav-tab.active {
+  color: #00f5ff;
+  background: rgba(0, 245, 255, 0.1);
+  box-shadow: 0 0 8px #00f5ff33;
+}
+
+/* ── Status indicators ── */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.status-online  { background: #00ff88; box-shadow: 0 0 6px #00ff88; animation: pulse-dot 2s ease-in-out infinite; }
+.status-warn    { background: #ffe600; box-shadow: 0 0 6px #ffe600; }
+.status-offline { background: #ff003c; box-shadow: 0 0 6px #ff003c; }
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 6px #00ff88; }
+  50%       { box-shadow: 0 0 12px #00ff88, 0 0 20px #00ff8844; }
+}
+
+/* ── Card base ── */
+.neo-card {
+  background: rgba(13, 13, 26, 0.8);
+  border: 1px solid rgba(0, 245, 255, 0.15);
+  border-radius: 0.75rem;
+  backdrop-filter: blur(8px);
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+.neo-card:hover {
+  border-color: rgba(0, 245, 255, 0.35);
+  box-shadow: 0 0 20px #00f5ff22;
+}
+
+/* ── Action button — Resolve Module ── */
+.btn-resolve {
+  background: linear-gradient(135deg, #00f5ff22, #00f5ff11);
+  border: 1px solid #00f5ff66;
+  color: #00f5ff;
+  padding: 0.6rem 1.4rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.btn-resolve:hover {
+  background: #00f5ff;
+  color: #070713;
+  box-shadow: 0 0 20px #00f5ff88;
+}
+
+/* ── Action button — Deploy to Vercel ── */
+.btn-deploy {
+  background: linear-gradient(135deg, #bf00ff22, #bf00ff11);
+  border: 1px solid #bf00ff66;
+  color: #bf00ff;
+  padding: 0.6rem 1.4rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.btn-deploy:hover {
+  background: #bf00ff;
+  color: #070713;
+  box-shadow: 0 0 20px #bf00ff88;
+}
+
+/* ── Action button — Audit Now ── */
+.btn-audit {
+  background: linear-gradient(135deg, #00ff8822, #00ff8811);
+  border: 1px solid #00ff8866;
+  color: #00ff88;
+  padding: 0.6rem 1.4rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.btn-audit:hover {
+  background: #00ff88;
+  color: #070713;
+  box-shadow: 0 0 20px #00ff8888;
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0d0d1a; }
+::-webkit-scrollbar-thumb { background: #00f5ff44; border-radius: 3px; }
+
+/* ── Gauge / SLA ring ── */
+.gauge-ring {
+  transform-origin: center;
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+/* ── Tier badge ── */
+.tier-badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tier-starter  { background: rgba(156,163,175,0.15); color: #9ca3af; border: 1px solid #9ca3af44; }
+.tier-pro      { background: rgba(0,245,255,0.15);   color: #00f5ff; border: 1px solid #00f5ff44; }
+.tier-audited  { background: rgba(191,0,255,0.15);   color: #bf00ff; border: 1px solid #bf00ff44; }
+
+/* ── Form inputs ── */
+.neo-input {
+  background: #0d0d1a;
+  border: 1px solid #374151;
+  border-radius: 0.375rem;
+  color: #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+.neo-input:focus {
+  outline: none;
+  border-color: #00f5ff;
+  box-shadow: 0 0 0 1px #00f5ff44;
+}

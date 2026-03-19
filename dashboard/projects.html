@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects — QAPi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: { neon: { cyan: '#00f5ff', purple: '#bf00ff', green: '#00ff88', yellow: '#ffe600', red: '#ff003c' } },
+          fontFamily: { mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'] },
+          animation: { 'flash': 'flash 1.4s ease-in-out infinite' },
+          keyframes: { flash: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.3 } } },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="neon-glow.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <style>
+    body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,245,255,0.02) 2px,rgba(0,245,255,0.02) 4px); pointer-events:none; z-index:9999; }
+    #mobile-menu { display: none; }
+    #mobile-menu.open { display: block; }
+    .project-card {
+      background: rgba(13,13,26,0.85);
+      border: 1px solid rgba(0,245,255,0.12);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+    }
+    .project-card:hover {
+      border-color: rgba(0,245,255,0.35);
+      box-shadow: 0 0 18px #00f5ff1a;
+    }
+    .project-card.selected {
+      border-color: #00f5ff;
+      box-shadow: 0 0 16px #00f5ff33;
+    }
+    .team-pill {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.65rem; padding: 0.15rem 0.6rem; border-radius: 9999px;
+      background: rgba(191,0,255,0.12); color: #bf00ff; border: 1px solid #bf00ff33;
+    }
+    .agent-pill {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.65rem; padding: 0.15rem 0.6rem; border-radius: 9999px;
+      background: rgba(0,245,255,0.1); color: #00f5ff; border: 1px solid #00f5ff33;
+    }
+    .vercel-pill {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.65rem; padding: 0.15rem 0.6rem; border-radius: 9999px;
+      background: rgba(0,255,136,0.1); color: #00ff88; border: 1px solid #00ff8833;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 font-mono min-h-screen overflow-x-hidden">
+  <div class="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+    <div class="absolute inset-0 cyber-grid"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="relative z-10 border-b border-neon-cyan/20 bg-gray-950/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="text-2xl font-bold glow-cyan text-neon-cyan tracking-widest shrink-0">QA<span class="text-neon-purple glow-purple">Pi</span></a>
+      <div class="hidden md:flex items-center gap-1" role="navigation" aria-label="Main navigation">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab active" aria-current="page">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="signup.html" class="hidden sm:block px-4 py-1.5 rounded border border-neon-cyan text-neon-cyan text-xs hover:bg-neon-cyan hover:text-gray-950 transition-all box-glow-cyan">Get API Key</a>
+        <button id="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false" class="md:hidden p-2 text-gray-400 hover:text-neon-cyan transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden border-t border-neon-cyan/10 bg-gray-950/95">
+      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <a href="index.html"        class="nav-tab">Home</a>
+        <a href="projects.html"     class="nav-tab active">Projects</a>
+        <a href="dependencies.html" class="nav-tab">Deps</a>
+        <a href="api.html"          class="nav-tab">APIs</a>
+        <a href="health.html"       class="nav-tab">Health</a>
+        <a href="pricing.html"      class="nav-tab">Pricing</a>
+        <a href="addons.html"       class="nav-tab">Add-ons</a>
+        <a href="developer.html"    class="nav-tab">Developer</a>
+        <a href="docs.html"         class="nav-tab">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="text-neon-cyan text-xs tracking-[0.3em] uppercase mb-1 animate-flash">● Projects</p>
+      <h1 class="text-3xl font-bold text-gray-100">Your <span class="text-neon-cyan glow-cyan">Projects</span></h1>
+      <p class="text-gray-500 text-xs mt-1">Manage modules, teams, agents, and Vercel deployments per project.</p>
+    </div>
+    <div class="flex gap-3">
+      <button id="btn-deploy-vercel" class="btn-deploy glow-pulse-purple" aria-label="Deploy to Vercel">▲ Deploy to Vercel</button>
+      <button id="btn-resolve-module" class="btn-resolve glow-pulse-cyan" aria-label="Resolve module">⚡ Resolve Module</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-6 flex flex-wrap gap-3 items-center">
+    <input id="search-input" type="text" placeholder="Search projects…" class="neo-input max-w-xs" aria-label="Search projects" />
+    <select id="filter-team" class="neo-input max-w-[140px]" aria-label="Filter by team">
+      <option value="">All Teams</option>
+      <option value="core">Core</option>
+      <option value="sdk">SDK</option>
+      <option value="infra">Infra</option>
+    </select>
+    <select id="filter-status" class="neo-input max-w-[140px]" aria-label="Filter by status">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="paused">Paused</option>
+    </select>
+  </div>
+
+  <!-- Project grid -->
+  <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-16" aria-label="Project list">
+    <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5" id="project-grid">
+      <!-- Injected by JS -->
+    </div>
+    <p id="no-results" class="hidden text-center text-gray-600 text-sm py-12">No projects match your filters.</p>
+  </section>
+
+  <!-- Project detail panel -->
+  <div id="project-detail" class="hidden relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-20">
+    <div class="neo-card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="detail-name" class="text-xl font-bold text-neon-cyan glow-cyan"></h2>
+        <button id="close-detail" class="text-gray-600 hover:text-neon-cyan text-xl transition-colors" aria-label="Close project detail">✕</button>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4" id="detail-stats"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="relative z-10 border-t border-neon-cyan/10 py-6 px-6 text-center">
+    <p class="text-gray-600 text-xs">QAPi © 2026 GXQ STUDIO — <a href="https://github.com/SMSDAO/QAPi" class="hover:text-neon-cyan transition-colors">GitHub</a></p>
+  </footer>
+
+  <script>
+    document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+      const menu = document.getElementById('mobile-menu');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', String(!expanded));
+      menu.classList.toggle('open');
+    });
+
+    const PROJECTS = [
+      { id: 'qapi-core',    name: 'qapi-core',    team: 'core',  status: 'active', modules: 42, agents: 2, vercel: true,  desc: 'Core virtual module resolver and tier management.' },
+      { id: 'solanar-sdk',  name: 'solanar-sdk',  team: 'sdk',   status: 'active', modules: 18, agents: 1, vercel: true,  desc: 'Client SDK for streaming modules via @solanar/sdk.' },
+      { id: 'qapi-dashboard',name:'qapi-dashboard',team:'infra', status: 'active', modules: 5,  agents: 0, vercel: true,  desc: 'Static NEO FLASH GLOW dashboard deployed to Vercel.' },
+      { id: 'blob-store',   name: 'blob-store',   team: 'infra', status: 'active', modules: 8,  agents: 1, vercel: false, desc: 'R2-backed blob module hosting for private VPS modules.' },
+      { id: 'auth-service', name: 'auth-service', team: 'core',  status: 'active', modules: 3,  agents: 0, vercel: true,  desc: 'JWT-based API key issuance and tier verification.' },
+      { id: 'zero-day-scanner',name:'zero-day-scanner',team:'core',status:'paused',modules:11, agents:3, vercel:false, desc: 'Automated CVE scanning for Audited tier projects.' },
+    ];
+
+    let selected = null;
+
+    function renderProjects(list) {
+      const grid = document.getElementById('project-grid');
+      const noResults = document.getElementById('no-results');
+      if (!list.length) {
+        grid.innerHTML = '';
+        noResults.classList.remove('hidden');
+        return;
+      }
+      noResults.classList.add('hidden');
+      grid.innerHTML = list.map(p => `
+        <div class="project-card${selected === p.id ? ' selected' : ''}" data-id="${p.id}" role="button" tabindex="0" aria-label="Open ${p.name} details">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="font-bold text-gray-100 text-sm">${p.name}</p>
+              <p class="text-xs text-gray-500 mt-0.5">${p.desc}</p>
+            </div>
+            <span class="status-dot ${p.status === 'active' ? 'status-online' : 'status-warn'} shrink-0 mt-1"></span>
+          </div>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <span class="team-pill">⬡ ${p.team}</span>
+            ${p.agents ? `<span class="agent-pill">🤖 ${p.agents} agent${p.agents > 1 ? 's' : ''}</span>` : ''}
+            ${p.vercel ? '<span class="vercel-pill">▲ Vercel</span>' : ''}
+          </div>
+          <div class="flex gap-4 mt-3 text-xs text-gray-600">
+            <span>${p.modules} modules</span>
+            <span class="${p.status === 'active' ? 'text-neon-green' : 'text-neon-yellow'}">${p.status}</span>
+          </div>
+        </div>`).join('');
+
+      grid.querySelectorAll('.project-card').forEach(card => {
+        const openDetail = () => openProject(card.dataset.id);
+        card.addEventListener('click', openDetail);
+        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(); } });
+      });
+    }
+
+    function openProject(id) {
+      selected = id;
+      const p = PROJECTS.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('detail-name').textContent = p.name;
+      document.getElementById('detail-stats').innerHTML = `
+        <div class="neo-card p-4 text-center"><p class="text-2xl font-bold text-neon-cyan glow-cyan">${p.modules}</p><p class="text-xs text-gray-500 mt-1">Modules</p></div>
+        <div class="neo-card p-4 text-center"><p class="text-2xl font-bold text-neon-purple glow-purple">${p.agents}</p><p class="text-xs text-gray-500 mt-1">Agents</p></div>
+        <div class="neo-card p-4 text-center"><p class="text-2xl font-bold ${p.vercel ? 'text-neon-green glow-green' : 'text-gray-600'}">${p.vercel ? '✔' : '—'}</p><p class="text-xs text-gray-500 mt-1">Vercel Deploy</p></div>
+      `;
+      document.getElementById('project-detail').classList.remove('hidden');
+      document.getElementById('project-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      applyFilters();
+    }
+
+    document.getElementById('close-detail').addEventListener('click', () => {
+      selected = null;
+      document.getElementById('project-detail').classList.add('hidden');
+      applyFilters();
+    });
+
+    function applyFilters() {
+      const q    = document.getElementById('search-input').value.toLowerCase();
+      const team = document.getElementById('filter-team').value;
+      const stat = document.getElementById('filter-status').value;
+      renderProjects(PROJECTS.filter(p =>
+        (!q    || p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q)) &&
+        (!team || p.team === team) &&
+        (!stat || p.status === stat)
+      ));
+    }
+
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+    document.getElementById('filter-team').addEventListener('change', applyFilters);
+    document.getElementById('filter-status').addEventListener('change', applyFilters);
+
+    // Action buttons
+    document.getElementById('btn-deploy-vercel').addEventListener('click', () => {
+      alert('Vercel deployment triggered for selected project. Configure your Vercel token in settings to enable automated deploys.');
+    });
+    document.getElementById('btn-resolve-module').addEventListener('click', () => {
+      window.location.href = 'developer.html';
+    });
+
+    renderProjects(PROJECTS);
+  </script>
+</body>
+</html>
