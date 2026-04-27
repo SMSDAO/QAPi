@@ -1,7 +1,7 @@
 // QAPi – in-memory key store (swap for a real DB in production)
 "use strict";
 
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID: uuidv4 } = require("crypto");
 
 /**
  * Tier definitions
