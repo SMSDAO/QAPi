@@ -1,11 +1,44 @@
 // QAPi – /modules routes
 "use strict";
 
+const crypto = require("crypto");
 const express = require("express");
 const { requireTier } = require("../middleware/auth");
-const { listNodes, getNode, findNodeByName, upsertNode } = require("../data/moduleStore");
+const { listNodes, getNode, findNodeByName, findNodeBySha, upsertNode } = require("../data/moduleStore");
 const { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } = require("@solanar/core-brain/lib/module-resolver");
 const { redactToken } = require("@solanar/core-brain/lib/tier-manager");
+
+/**
+ * Wraps fetch() with exponential-backoff retry logic.
+ * Retries on network errors and non-OK (non-304) responses.
+ * Delays: 100 ms, 200 ms, 400 ms (max 3 attempts).
+ *
+ * @param {string} url
+ * @param {RequestInit} options
+ * @param {number} [maxRetries=3]
+ * @returns {Promise<Response>} Resolves with an ok or 304 response.
+ * @throws {Error} After all retries are exhausted.
+ */
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok || response.status === 304) return response;
+
+      if (attempt < maxRetries) {
+        const delayMs = 100 * Math.pow(2, attempt - 1);
+        console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs }));
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      const delayMs = 100 * Math.pow(2, attempt - 1);
+      console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs, error: err.message }));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
 
 const TIER_ORDER = ["starter", "pro", "audited"];
 
@@ -126,9 +159,19 @@ router.get("/stream", async (req, res, next) => {
 
   try {
     const ifNoneMatch = req.headers["if-none-match"];
-    const upstreamRes = await fetch(upstream, {
-      headers: { ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}) },
-    });
+
+    // Use retry wrapper to recover from transient upstream failures.
+    let upstreamRes;
+    try {
+      upstreamRes = await fetchWithRetry(upstream, {
+        headers: { ...(ifNoneMatch ? { "If-None-Match": ifNoneMatch } : {}) },
+      });
+    } catch (_fetchErr) {
+      return res.status(503).json({
+        error: "Module stream upstream unavailable after retries.",
+        code: "STREAM_UPSTREAM_UNAVAILABLE",
+      });
+    }
 
     const etag = upstreamRes.headers.get("etag") || "";
 
@@ -137,23 +180,32 @@ router.get("/stream", async (req, res, next) => {
       return res.status(304).end();
     }
 
-    if (!upstreamRes.ok) {
-      return res.status(502).json({
-        error: `Upstream error (${upstreamRes.status})`,
-        code: "STREAM_UPSTREAM_ERROR",
-      });
-    }
-
+    // fetchWithRetry guarantees upstreamRes.ok here.
     if (etag) res.setHeader("ETag", etag);
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "private, max-age=3600");
     res.setHeader("Vary", "X-QAPi-Key, Authorization");
 
-    // Audited tier: emit a structured audit log entry.
-    // We must buffer the body to know its byte size for the log entry.
+    // Audited tier: SHA-256 integrity check + structured audit log.
+    // We must buffer the body to compute the hash and log its byte size.
     // For other tiers, pipe directly to avoid buffering large files.
     if (req.qapiTier === "audited") {
       const body = await upstreamRes.text();
+
+      // Integrity check: compare body hash against the registered contentHash.
+      const node = gh ? findNodeBySha(gh.sha) : null;
+      if (node && node.audit.contentHash) {
+        const computedHash = crypto.createHash("sha256").update(body).digest("hex");
+        if (computedHash !== node.audit.contentHash) {
+          return res.status(403).json({
+            error: "Module content failed SHA-256 integrity check",
+            code: "STREAM_INTEGRITY_FAILED",
+            expected: node.audit.contentHash,
+            computed: computedHash,
+          });
+        }
+      }
+
       console.log(JSON.stringify({
         ts: new Date().toISOString(),
         event: "stream-audit",
