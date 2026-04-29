@@ -9,27 +9,44 @@ const { parseGhModuleId, parseBlobModuleId, ghRawUrl, blobUrl } = require("@sola
 const { redactToken } = require("@solanar/core-brain/lib/tier-manager");
 
 /**
+ * Returns true for HTTP statuses that are typically transient and safe to retry.
+ * 4xx errors (except 429) are deterministic client/config errors and must not be retried.
+ *
+ * @param {number} status
+ * @returns {boolean}
+ */
+function isRetryableStatus(status) {
+  return status === 429 || status === 502 || status === 503 || status === 504;
+}
+
+/**
  * Wraps fetch() with exponential-backoff retry logic.
- * Retries on network errors and non-OK (non-304) responses.
+ * Retries on network errors and retryable upstream responses (429/502/503/504).
+ * Non-retryable non-OK responses are returned immediately so the caller can
+ * forward the original upstream status rather than masking it as a 503.
  * Delays: 100 ms, 200 ms, 400 ms (max 3 attempts).
  *
  * @param {string} url
  * @param {RequestInit} options
  * @param {number} [maxRetries=3]
- * @returns {Promise<Response>} Resolves with an ok or 304 response.
- * @throws {Error} After all retries are exhausted.
+ * @returns {Promise<Response>} Resolves with the upstream response (ok, 304, or non-retryable error).
+ * @throws {Error} After all retries are exhausted due to network errors or retryable statuses.
  */
 async function fetchWithRetry(url, options, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(url, options);
       if (response.ok || response.status === 304) return response;
+      // Non-retryable status: return immediately so the caller can handle it.
+      if (!isRetryableStatus(response.status)) return response;
+      // Last attempt: return the retryable response as-is.
+      if (attempt === maxRetries) return response;
 
-      if (attempt < maxRetries) {
-        const delayMs = 100 * Math.pow(2, attempt - 1);
-        console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs }));
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
+      // Consume the body before backing off so the connection can be reused.
+      await response.body?.cancel();
+      const delayMs = 100 * Math.pow(2, attempt - 1);
+      console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs, status: response.status }));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     } catch (err) {
       if (attempt === maxRetries) throw err;
       const delayMs = 100 * Math.pow(2, attempt - 1);
@@ -180,22 +197,39 @@ router.get("/stream", async (req, res, next) => {
       return res.status(304).end();
     }
 
-    // fetchWithRetry guarantees upstreamRes.ok here.
+    // fetchWithRetry returns non-retryable non-OK responses directly so the
+    // original upstream status is preserved rather than being masked as a 503.
+    if (!upstreamRes.ok) {
+      return res.status(502).json({
+        error: `Upstream error (${upstreamRes.status})`,
+        code: "STREAM_UPSTREAM_ERROR",
+      });
+    }
+
     if (etag) res.setHeader("ETag", etag);
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "private, max-age=3600");
     res.setHeader("Vary", "X-QAPi-Key, Authorization");
 
     // Audited tier: SHA-256 integrity check + structured audit log.
-    // We must buffer the body to compute the hash and log its byte size.
-    // For other tiers, pipe directly to avoid buffering large files.
+    // Buffer the raw bytes so we can (a) hash them accurately and (b) know
+    // the exact byte count for the audit log.
+    // A size cap avoids unbounded memory usage for unexpectedly large payloads.
     if (req.qapiTier === "audited") {
-      const body = await upstreamRes.text();
+      const MAX_BUFFER_BYTES = 10 * 1024 * 1024; // 10 MB
+      const buffer = Buffer.from(await upstreamRes.arrayBuffer());
 
-      // Integrity check: compare body hash against the registered contentHash.
+      if (buffer.byteLength > MAX_BUFFER_BYTES) {
+        return res.status(413).json({
+          error: `Module content exceeds the 10 MB buffering limit for integrity verification.`,
+          code: "STREAM_CONTENT_TOO_LARGE",
+        });
+      }
+
+      // Integrity check: compare raw-byte hash against the registered contentHash.
       const node = gh ? findNodeBySha(gh.sha) : null;
-      if (node && node.audit.contentHash) {
-        const computedHash = crypto.createHash("sha256").update(body).digest("hex");
+      if (node && node.audit?.contentHash) {
+        const computedHash = crypto.createHash("sha256").update(buffer).digest("hex");
         if (computedHash !== node.audit.contentHash) {
           return res.status(403).json({
             error: "Module content failed SHA-256 integrity check",
@@ -214,10 +248,10 @@ router.get("/stream", async (req, res, next) => {
         module: moduleId,
         upstream,
         status: 200,
-        bytes: body.length,
+        bytes: buffer.byteLength,
         latencyMs: Date.now() - started,
       }));
-      res.send(body);
+      res.send(buffer);
     } else {
       const { Readable } = require("node:stream");
       Readable.fromWeb(upstreamRes.body).pipe(res);

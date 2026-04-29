@@ -61,7 +61,7 @@ function _make(overrides) {
   _make({ name: "@solanar/vps-module-alpha", version: "1.0.0", description: "Private VPS-hosted module (Pro tier)", tier: "pro",
     source: { type: "vps", url: "https://vps.qapi-omega.vercel.app/modules/alpha.git", branch: "main", entrypoint: "index.js", privateVps: true, region: "eu-west-1", sha: "3f8d2e7a9c14b05feda6c8b97a12d5e3f4c81029" },
     registry: { npm: null, github: null, license: "UNLICENSED", keywords: ["private","vps"], homepage: null },
-    audit: { score: 100, passed: true, vulnerabilities: { critical:0, high:0, moderate:0, low:0, info:0 }, cve: [], lastScannedAt: new Date().toISOString(), scanEngine:"qapi-audit-v1", zeroDay:false },
+    audit: { score: 100, passed: true, vulnerabilities: { critical:0, high:0, moderate:0, low:0, info:0 }, cve: [], lastScannedAt: new Date().toISOString(), scanEngine:"qapi-audit-v1", zeroDay:false, contentHash:"c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6" },
     cache: { enabled: true, ttlSeconds: 3600, dedicatedCache: true, hitCount: 0, missCount: 0, lastPurgedAt: null },
   }),
 ].forEach((n) => _nodes.set(n.id, n));
