@@ -21,40 +21,47 @@ function isRetryableStatus(status) {
 
 /**
  * Wraps fetch() with exponential-backoff retry logic.
- * Retries on network errors and retryable upstream responses (429/502/503/504).
+ * Retries on network errors and retryable upstream statuses (429/502/503/504).
  * Non-retryable non-OK responses are returned immediately so the caller can
- * forward the original upstream status rather than masking it as a 503.
- * Delays: 100 ms, 200 ms, 400 ms (max 3 attempts).
+ * forward the original upstream status code directly to the client.
+ * Delays: 100 ms, 200 ms (max 3 attempts total).
  *
  * @param {string} url
  * @param {RequestInit} options
  * @param {number} [maxRetries=3]
- * @returns {Promise<Response>} Resolves with the upstream response (ok, 304, or non-retryable error).
+ * @returns {Promise<Response>} Resolves with an ok/304 response or a non-retryable error response.
  * @throws {Error} After all retries are exhausted due to network errors or retryable statuses.
  */
 async function fetchWithRetry(url, options, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Separate try/catch so that network errors and HTTP-status handling
+    // are dealt with independently.
+    let response;
     try {
-      const response = await fetch(url, options);
-      if (response.ok || response.status === 304) return response;
-      // Non-retryable status: return immediately so the caller can handle it.
-      if (!isRetryableStatus(response.status)) return response;
-      // Last attempt: return the retryable response as-is.
-      if (attempt === maxRetries) return response;
-
-      // Consume the body before backing off so the connection can be reused.
-      await response.body?.cancel();
-      const delayMs = 100 * Math.pow(2, attempt - 1);
-      console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs, status: response.status }));
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      response = await fetch(url, options);
     } catch (err) {
       if (attempt === maxRetries) throw err;
       const delayMs = 100 * Math.pow(2, attempt - 1);
       console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs, error: err.message }));
       await new Promise((resolve) => setTimeout(resolve, delayMs));
+      continue;
     }
+
+    if (response.ok || response.status === 304) return response;
+    // Non-retryable status: return immediately; caller forwards the original status.
+    if (!isRetryableStatus(response.status)) return response;
+
+    // Retryable status: consume the body to release the connection.
+    await response.body?.cancel();
+
+    if (attempt === maxRetries) {
+      throw new Error(`Upstream returned ${response.status} after ${maxRetries} retries`);
+    }
+
+    const delayMs = 100 * Math.pow(2, attempt - 1);
+    console.log(JSON.stringify({ ts: new Date().toISOString(), event: "stream-retry", attempt, url, delayMs, status: response.status }));
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  throw new Error("Max retries exceeded");
 }
 
 const TIER_ORDER = ["starter", "pro", "audited"];
@@ -174,6 +181,26 @@ router.get("/stream", async (req, res, next) => {
 
   const started = Date.now();
 
+  // SSRF mitigation: only allow requests to known upstream hosts.
+  try {
+    const parsedUpstream = new URL(upstream);
+    const allowedHosts = new Set(["raw.githubusercontent.com"]);
+    if (process.env.QAPI_BLOB_BASE_URL) {
+      allowedHosts.add(new URL(process.env.QAPI_BLOB_BASE_URL).hostname);
+    }
+    if (!allowedHosts.has(parsedUpstream.hostname)) {
+      return res.status(400).json({
+        error: "Module upstream URL is not from an allowed host.",
+        code: "STREAM_UPSTREAM_HOST_DENIED",
+      });
+    }
+  } catch {
+    return res.status(400).json({
+      error: "Could not validate module upstream URL.",
+      code: "STREAM_INVALID_UPSTREAM",
+    });
+  }
+
   try {
     const ifNoneMatch = req.headers["if-none-match"];
 
@@ -197,10 +224,11 @@ router.get("/stream", async (req, res, next) => {
       return res.status(304).end();
     }
 
-    // fetchWithRetry returns non-retryable non-OK responses directly so the
-    // original upstream status is preserved rather than being masked as a 503.
+    // fetchWithRetry returns non-retryable non-OK responses directly.
+    // Return the original upstream status code so the caller sees 404, 403, etc.
+    // as-is rather than a generic 502.
     if (!upstreamRes.ok) {
-      return res.status(502).json({
+      return res.status(upstreamRes.status).json({
         error: `Upstream error (${upstreamRes.status})`,
         code: "STREAM_UPSTREAM_ERROR",
       });
@@ -214,21 +242,34 @@ router.get("/stream", async (req, res, next) => {
     // Audited tier: SHA-256 integrity check + structured audit log.
     // Buffer the raw bytes so we can (a) hash them accurately and (b) know
     // the exact byte count for the audit log.
-    // A size cap avoids unbounded memory usage for unexpectedly large payloads.
+    // Check Content-Length first (when present) for an early exit before
+    // buffering, then verify again after to handle missing/incorrect headers.
     if (req.qapiTier === "audited") {
       const MAX_BUFFER_BYTES = 10 * 1024 * 1024; // 10 MB
+
+      const contentLengthHeader = upstreamRes.headers.get("content-length");
+      const contentLength = contentLengthHeader ? parseInt(contentLengthHeader, 10) : NaN;
+      if (!isNaN(contentLength) && contentLength > MAX_BUFFER_BYTES) {
+        return res.status(413).json({
+          error: "Module content exceeds the 10 MB buffering limit for integrity verification.",
+          code: "STREAM_CONTENT_TOO_LARGE",
+        });
+      }
+
       const buffer = Buffer.from(await upstreamRes.arrayBuffer());
 
       if (buffer.byteLength > MAX_BUFFER_BYTES) {
         return res.status(413).json({
-          error: `Module content exceeds the 10 MB buffering limit for integrity verification.`,
+          error: "Module content exceeds the 10 MB buffering limit for integrity verification.",
           code: "STREAM_CONTENT_TOO_LARGE",
         });
       }
 
       // Integrity check: compare raw-byte hash against the registered contentHash.
+      // Only enforce when the request targets the exact file that was hashed
+      // (i.e. filePath matches the module's stored entrypoint).
       const node = gh ? findNodeBySha(gh.sha) : null;
-      if (node && node.audit?.contentHash) {
+      if (node && node.audit?.contentHash && node.source?.entrypoint === gh.filePath) {
         const computedHash = crypto.createHash("sha256").update(buffer).digest("hex");
         if (computedHash !== node.audit.contentHash) {
           return res.status(403).json({

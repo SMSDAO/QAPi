@@ -4,6 +4,7 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
+const { createHash } = require("node:crypto");
 
 let app, server, BASE;
 
@@ -496,7 +497,164 @@ describe("GET /v1/modules/:sha", () => {
   });
 });
 
-// ── 404 fallback ──────────────────────────────────────────────────────────
+// ── GET /modules/stream – fetch and integrity behavior ─────────────────────
+// These tests stub global.fetch to exercise retry logic and audited-tier
+// SHA-256 integrity checking without making real network calls.
+describe("GET /modules/stream – fetch and integrity behavior", () => {
+  // A stable 40-char hex SHA that passes module-ID validation.
+  const RETRY_SHA = "c".repeat(40);
+  const GH_RETRY_MODULE = `gh:expressjs/express@${RETRY_SHA}:index.js`;
+
+  // Content used for integrity-check tests.
+  const TEST_CONTENT = "module.exports = 42;";
+  const TEST_CONTENT_BYTES = Buffer.from(TEST_CONTENT);
+  const TEST_HASH = createHash("sha256").update(TEST_CONTENT_BYTES).digest("hex");
+  const WRONG_HASH = "a".repeat(64); // valid 64-char hex but doesn't match TEST_CONTENT
+
+  /** Returns an ArrayBuffer containing the exact bytes of buf. */
+  function toArrayBuffer(buf) {
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  }
+
+  /** Mock factory: fetch always returns a retryable HTTP status. */
+  function retryableFetch(status = 503) {
+    let calls = 0;
+    const fn = async () => {
+      calls++;
+      return { ok: false, status, headers: { get: () => null }, body: { cancel: async () => {} } };
+    };
+    fn.calls = () => calls;
+    return fn;
+  }
+
+  /** Mock factory: fetch returns a non-retryable non-OK status. */
+  function nonRetryableFetch(status = 404) {
+    return async () => ({ ok: false, status, headers: { get: () => null }, body: null });
+  }
+
+  /** Mock factory: fetch returns a 200 OK response with the given content. */
+  function okFetch(content) {
+    const ab = toArrayBuffer(Buffer.from(content));
+    return async () => ({ ok: true, status: 200, headers: { get: () => null }, arrayBuffer: async () => ab, body: null });
+  }
+
+  test("returns 503 after retries are exhausted on retryable upstream status", async () => {
+    const mockFetch = retryableFetch(503);
+    const saved = global.fetch;
+    global.fetch = mockFetch;
+    try {
+      const { status, body } = await req("GET", `/modules/stream?module=${encodeURIComponent(GH_RETRY_MODULE)}`, {
+        headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+      });
+      assert.equal(status, 503);
+      assert.equal(body.code, "STREAM_UPSTREAM_UNAVAILABLE");
+      assert.equal(mockFetch.calls(), 3, "fetch must be called exactly 3 times (maxRetries)");
+    } finally {
+      global.fetch = saved;
+    }
+  });
+
+  test("returns upstream status for a non-retryable upstream error", async () => {
+    const saved = global.fetch;
+    global.fetch = nonRetryableFetch(404);
+    try {
+      const { status, body } = await req("GET", `/modules/stream?module=${encodeURIComponent(GH_RETRY_MODULE)}`, {
+        headers: { "X-QAPi-Key": "qapi-starter-demo-key" },
+      });
+      assert.equal(status, 404);
+      assert.equal(body.code, "STREAM_UPSTREAM_ERROR");
+    } finally {
+      global.fetch = saved;
+    }
+  });
+
+  test("audited tier: returns 403 STREAM_INTEGRITY_FAILED when hash does not match", async () => {
+    const SHA_MISMATCH = "d".repeat(40);
+    // Register a module with a WRONG stored hash so comparison will fail.
+    await req("POST", "/modules", {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+      body: {
+        name: "test-integrity-mismatch", version: "1.0.0",
+        source: { type: "github", url: "https://github.com/test/repo.git", branch: "main", entrypoint: "index.js", privateVps: false, sha: SHA_MISMATCH },
+        tier: "starter",
+        audit: { score: 99, passed: true, vulnerabilities: { critical:0, high:0, moderate:0, low:0, info:0 }, cve: [], lastScannedAt: new Date().toISOString(), scanEngine: "qapi-audit-v1", zeroDay: false, contentHash: WRONG_HASH },
+      },
+    });
+
+    const saved = global.fetch;
+    global.fetch = okFetch(TEST_CONTENT);
+    try {
+      const { status, body } = await req(
+        "GET",
+        `/modules/stream?module=${encodeURIComponent(`gh:test/repo@${SHA_MISMATCH}:index.js`)}`,
+        { headers: { "X-QAPi-Key": "qapi-audited-demo-key" } }
+      );
+      assert.equal(status, 403);
+      assert.equal(body.code, "STREAM_INTEGRITY_FAILED");
+    } finally {
+      global.fetch = saved;
+    }
+  });
+
+  test("audited tier: streams content when hash matches", async () => {
+    const SHA_MATCH = "e".repeat(40);
+    // Register a module with the CORRECT stored hash for TEST_CONTENT.
+    await req("POST", "/modules", {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+      body: {
+        name: "test-integrity-match", version: "1.0.0",
+        source: { type: "github", url: "https://github.com/test/repo.git", branch: "main", entrypoint: "index.js", privateVps: false, sha: SHA_MATCH },
+        tier: "starter",
+        audit: { score: 99, passed: true, vulnerabilities: { critical:0, high:0, moderate:0, low:0, info:0 }, cve: [], lastScannedAt: new Date().toISOString(), scanEngine: "qapi-audit-v1", zeroDay: false, contentHash: TEST_HASH },
+      },
+    });
+
+    const saved = global.fetch;
+    global.fetch = okFetch(TEST_CONTENT);
+    try {
+      const { status } = await req(
+        "GET",
+        `/modules/stream?module=${encodeURIComponent(`gh:test/repo@${SHA_MATCH}:index.js`)}`,
+        { headers: { "X-QAPi-Key": "qapi-audited-demo-key" } }
+      );
+      assert.equal(status, 200);
+    } finally {
+      global.fetch = saved;
+    }
+  });
+
+  test("audited tier: integrity check only fires for matching entrypoint path", async () => {
+    const SHA_ENTRYPOINT = "f".repeat(40);
+    // Register a module whose entrypoint is 'main.js', but request 'other.js'.
+    await req("POST", "/modules", {
+      headers: { "X-QAPi-Key": "qapi-pro-demo-key" },
+      body: {
+        name: "test-integrity-entrypoint", version: "1.0.0",
+        source: { type: "github", url: "https://github.com/test/repo.git", branch: "main", entrypoint: "main.js", privateVps: false, sha: SHA_ENTRYPOINT },
+        tier: "starter",
+        audit: { score: 99, passed: true, vulnerabilities: { critical:0, high:0, moderate:0, low:0, info:0 }, cve: [], lastScannedAt: new Date().toISOString(), scanEngine: "qapi-audit-v1", zeroDay: false, contentHash: WRONG_HASH },
+      },
+    });
+
+    const saved = global.fetch;
+    // Request a DIFFERENT file at the same SHA with content that would NOT match WRONG_HASH.
+    // The integrity check must be skipped because the path doesn't match the entrypoint.
+    global.fetch = okFetch(TEST_CONTENT);
+    try {
+      const { status } = await req(
+        "GET",
+        `/modules/stream?module=${encodeURIComponent(`gh:test/repo@${SHA_ENTRYPOINT}:other.js`)}`,
+        { headers: { "X-QAPi-Key": "qapi-audited-demo-key" } }
+      );
+      // Should succeed (no integrity check triggered) rather than 403.
+      assert.equal(status, 200);
+    } finally {
+      global.fetch = saved;
+    }
+  });
+});
+
+
 describe("404 fallback", () => {
   test("returns 404 for unknown routes", async () => {
     const { status } = await req("GET", "/this-does-not-exist");
